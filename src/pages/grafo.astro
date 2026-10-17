@@ -1,0 +1,193 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../data/index.json';
+
+const grafo = (data as any).grafo ?? { concepts: [], nodes: [], links: [] };
+const activos = grafo.nodes.filter((n: any) => n.kind === 'activo').length;
+const publicados = grafo.nodes.filter((n: any) => n.kind === 'publicado').length;
+---
+<Base title="Grafo" sub="Proyectos en curso y obra publicada, conectados por los conceptos del dossier" active="grafo">
+  <div class="g-toolbar">
+    <div class="g-pills" role="group" aria-label="Mostrar">
+      <button type="button" class="g-pill on" data-kind="activo"><i class="g-sw activo"></i>En curso · {activos}</button>
+      <button type="button" class="g-pill on" data-kind="publicado"><i class="g-sw publicado"></i>Publicado · {publicados}</button>
+      <button type="button" class="g-pill on" data-kind="relacion"><i class="g-sw relacion"></i>Relaciones</button>
+    </div>
+    <label class="g-search">
+      <input type="search" id="g-search" placeholder="buscar proyecto o concepto…" autocomplete="off" />
+    </label>
+  </div>
+
+  <div class="g-area">
+    <svg id="g-svg" role="group" aria-label="Grafo de proyectos y conceptos"></svg>
+    <aside class="g-detail" id="g-detail">
+      <span class="label">Cómo leerlo</span>
+      <p>Las <b>islas grandes</b> son conceptos del dossier; su tamaño, cuántas obras los tocan. Los puntos <b class="hot-text">rojos</b> son proyectos en curso, los grises, obra publicada. Las líneas rojas son relaciones declaradas en <code>relacionados:</code>.</p>
+      <p class="muted">Clic en un nodo para ver sus vínculos. Arrastrar para mover. Rueda para acercar.</p>
+    </aside>
+  </div>
+
+  <script is:inline type="application/json" id="g-data" set:html={JSON.stringify(grafo)}></script>
+  <script is:inline src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script is:inline>
+    (() => {
+      const G = JSON.parse(document.getElementById('g-data').textContent);
+      const svg = d3.select('#g-svg');
+      const detail = document.getElementById('g-detail');
+      const css = getComputedStyle(document.documentElement);
+      const C = {
+        ink: css.getPropertyValue('--ink').trim(), muted: css.getPropertyValue('--muted').trim(),
+        line: css.getPropertyValue('--line').trim(), soft: css.getPropertyValue('--soft').trim(),
+        accent: css.getPropertyValue('--accent').trim(), surface: css.getPropertyValue('--surface').trim(),
+      };
+
+      const conceptNodes = G.concepts.filter((c) => c.count > 0).map((c) => ({ ...c, kind: 'concepto', title: c.label }));
+      const all = [...conceptNodes, ...G.nodes];
+      const byId = new Map(all.map((n) => [n.id, n]));
+      const links = G.links.filter((l) => byId.has(l.source) && byId.has(l.target)).map((l) => ({ ...l }));
+      const r = (n) => n.kind === 'concepto' ? 10 + Math.sqrt(n.count) * 5 : n.kind === 'activo' ? 7 : 3.5;
+
+      const box = () => svg.node().getBoundingClientRect();
+      const { width: bw, height: bh } = box();
+      const W = bw || 900, H = bh || 600;
+      // arranque alrededor del centro (no en 0,0)
+      all.forEach((n, i) => { const a = i * 2.399963; const d = 12 * Math.sqrt(i); n.x = W / 2 + d * Math.cos(a); n.y = H / 2 + d * Math.sin(a); });
+      const root = svg.append('g');
+      const zoom = d3.zoom().scaleExtent([0.2, 4]).on('zoom', (e) => root.attr('transform', e.transform));
+      svg.call(zoom);
+
+      const linkSel = root.append('g').selectAll('line').data(links).join('line')
+        .attr('stroke', (l) => l.type === 'relacion' ? C.accent : C.line)
+        .attr('stroke-width', (l) => l.type === 'relacion' ? 1.6 : 0.7)
+        .attr('stroke-dasharray', (l) => l.type === 'carpeta' ? '3 3' : null)
+        .attr('stroke-opacity', (l) => l.type === 'relacion' ? 0.9 : 0.55);
+
+      const nodeSel = root.append('g').selectAll('g').data(all).join('g').attr('class', (n) => `g-node ${n.kind}`);
+      nodeSel.append('circle')
+        .attr('r', r)
+        .attr('fill', (n) => n.kind === 'concepto' ? C.soft : n.kind === 'activo' ? C.accent : C.muted)
+        .attr('stroke', (n) => n.kind === 'concepto' ? C.ink : C.surface)
+        .attr('stroke-width', (n) => n.kind === 'concepto' ? 1 : 1.2);
+      nodeSel.filter((n) => n.kind !== 'publicado').append('text')
+        .text((n) => n.kind === 'concepto' ? n.title.split(/ y | e |, /)[0] : n.title.split(/ — | – | · /)[0].replace(/ \(.*\)$/, ''))
+        .attr('dy', (n) => n.kind === 'concepto' ? 4 : -11)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', 12)
+        .attr('font-weight', (n) => n.kind === 'activo' ? 600 : 500)
+        .attr('fill', C.ink)
+        .attr('pointer-events', 'none');
+      nodeSel.append('title').text((n) => n.title + (n.year ? ` · ${n.year}` : ''));
+
+      const sim = d3.forceSimulation(all)
+        .force('link', d3.forceLink(links).id((n) => n.id)
+          .distance((l) => l.type === 'concepto' ? 120 : 70)
+          .strength((l) => l.type === 'concepto' ? 0.12 : 0.4))
+        .force('charge', d3.forceManyBody().strength((n) => n.kind === 'concepto' ? -700 : n.kind === 'activo' ? -220 : -40).distanceMax(600))
+        .force('collide', d3.forceCollide().radius((n) => r(n) + (n.kind === 'publicado' ? 2 : n.kind === 'activo' ? 26 : 12)))
+        .force('x', d3.forceX(W / 2).strength(0.02))
+        .force('y', d3.forceY(H / 2).strength(0.035))
+        .stop();
+      const draw = () => {
+        linkSel.attr('x1', (l) => l.source.x).attr('y1', (l) => l.source.y)
+               .attr('x2', (l) => l.target.x).attr('y2', (l) => l.target.y);
+        nodeSel.attr('transform', (n) => `translate(${n.x},${n.y})`);
+      };
+      // layout precalculado: aparece ordenado aunque la pestaña esté en segundo plano
+      sim.tick(320);
+      draw();
+      const xs = all.map((n) => n.x), ys = all.map((n) => n.y);
+      const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+      const k = Math.min(1.4, 0.92 * Math.min(W / (x1 - x0 + 80), H / (y1 - y0 + 80)));
+      svg.call(zoom.transform, d3.zoomIdentity.translate(W / 2 - k * (x0 + x1) / 2, H / 2 - k * (y0 + y1) / 2).scale(k));
+      sim.on('tick', draw);
+
+      nodeSel.call(d3.drag()
+        .on('start', (e, n) => { if (!e.active) sim.alphaTarget(0.2).restart(); n.fx = n.x; n.fy = n.y; })
+        .on('drag', (e, n) => { n.fx = e.x; n.fy = e.y; })
+        .on('end', (e, n) => { if (!e.active) sim.alphaTarget(0); n.fx = null; n.fy = null; }));
+
+      // ---------- selección ----------
+      const neighbours = (id) => {
+        const s = new Set([id]);
+        links.forEach((l) => { if (l.source.id === id) s.add(l.target.id); if (l.target.id === id) s.add(l.source.id); });
+        return s;
+      };
+      const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      function select(n) {
+        const near = neighbours(n.id);
+        nodeSel.classed('dim', (m) => !near.has(m.id));
+        linkSel.classed('dim', (l) => l.source.id !== n.id && l.target.id !== n.id);
+        const connected = [...near].filter((id) => id !== n.id).map((id) => byId.get(id));
+        const list = (kind) => connected.filter((m) => m.kind === kind)
+          .sort((a, b) => String(b.year || '').localeCompare(String(a.year || '')))
+          .map((m) => `<li data-id="${esc(m.id)}">${esc(m.title)}${m.year ? ` <span class="muted">${esc(m.year)}</span>` : ''}</li>`).join('');
+        if (n.kind === 'concepto') {
+          detail.innerHTML = `<span class="label">Concepto</span><h3>${esc(n.title)}</h3><p class="muted">${esc(n.description)}</p>
+            <span class="label">En curso</span><ul>${list('activo') || '<li class="muted">—</li>'}</ul>
+            <span class="label">Publicado · ${connected.filter((m) => m.kind === 'publicado').length}</span><ul>${list('publicado')}</ul>`;
+        } else {
+          detail.innerHTML = `<span class="label">${n.kind === 'activo' ? 'En curso' : 'Publicado'}${n.year ? ' · ' + esc(n.year) : ''}</span>
+            <h3>${esc(n.title)}</h3>${n.sub ? `<p class="muted">${esc(n.sub)}</p>` : ''}
+            ${n.estado ? `<p><span class="chip">${esc(n.estado)}</span></p>` : ''}
+            ${n.personas?.length ? `<p>${n.personas.map(esc).join(' · ')}</p>` : ''}
+            <span class="label">Conceptos</span><ul>${list('concepto')}</ul>
+            ${list('activo') ? `<span class="label">Relacionados</span><ul>${list('activo')}</ul>` : ''}
+            <p class="muted small">${esc(n.path)}</p>`;
+        }
+        detail.querySelectorAll('li[data-id]').forEach((li) => li.addEventListener('click', () => select(byId.get(li.dataset.id))));
+      }
+      nodeSel.on('click', (e, n) => { e.stopPropagation(); select(n); });
+      svg.on('click', () => { nodeSel.classed('dim', false); linkSel.classed('dim', false); });
+
+      // ---------- filtros y búsqueda ----------
+      const shown = { activo: true, publicado: true, relacion: true };
+      function applyFilters() {
+        nodeSel.style('display', (n) => n.kind === 'concepto' || shown[n.kind] ? null : 'none');
+        linkSel.style('display', (l) => {
+          if (l.type === 'relacion' && !shown.relacion) return 'none';
+          const k = (m) => m.kind === 'concepto' || shown[m.kind];
+          return k(l.source) && k(l.target) ? null : 'none';
+        });
+      }
+      document.querySelectorAll('.g-pill').forEach((b) => b.addEventListener('click', () => {
+        shown[b.dataset.kind] = !shown[b.dataset.kind];
+        b.classList.toggle('on', shown[b.dataset.kind]);
+        applyFilters();
+      }));
+      document.getElementById('g-search').addEventListener('input', (e) => {
+        const q = e.target.value.trim().toLowerCase();
+        if (!q) { nodeSel.classed('dim', false); linkSel.classed('dim', false); return; }
+        nodeSel.classed('dim', (n) => !n.title.toLowerCase().includes(q));
+        linkSel.classed('dim', true);
+        const hit = all.find((n) => n.title.toLowerCase().includes(q));
+        if (hit && e.inputType !== 'deleteContentBackward' && q.length > 2) select(hit);
+      });
+    })();
+  </script>
+</Base>
+
+<style is:global>
+  .g-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .g-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .g-pill { font: inherit; font-size: 14px; background: var(--surface); color: var(--muted); border: 1px solid var(--line); padding: 6px 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .g-pill.on { color: var(--ink); border-color: var(--ink); }
+  .g-sw { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .g-sw.activo { background: var(--accent); }
+  .g-sw.publicado { background: var(--muted); }
+  .g-sw.relacion { background: none; border-top: 2px solid var(--accent); border-radius: 0; height: 0; width: 14px; }
+  .g-search input { font: inherit; background: var(--surface); color: var(--ink); border: 1px solid var(--line); padding: 6px 10px; width: 260px; max-width: 100%; }
+  .g-area { display: grid; grid-template-columns: 1fr 300px; gap: 12px; height: calc(100vh - 220px); min-height: 520px; }
+  #g-svg { width: 100%; height: 100%; background: var(--surface); border: 1px solid var(--line); cursor: grab; }
+  .g-node { cursor: pointer; transition: opacity .2s; }
+  .g-node.dim, #g-svg line.dim { opacity: .12; }
+  #g-svg line { transition: opacity .2s; }
+  .g-node text { font-family: var(--font); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+  .g-detail { background: var(--surface); border: 1px solid var(--line); padding: 16px; overflow: auto; }
+  .g-detail h3 { font-size: 22px; margin: 4px 0 8px; line-height: 1.15; }
+  .g-detail ul { list-style: none; padding: 0; margin: 4px 0 14px; }
+  .g-detail li { padding: 3px 0; border-bottom: 1px solid var(--soft); cursor: pointer; }
+  .g-detail li:hover { color: var(--accent); }
+  .g-detail .muted { color: var(--muted); }
+  .g-detail .small { font-size: 12px; }
+  @media (max-width: 900px) { .g-area { grid-template-columns: 1fr; height: auto; } #g-svg { height: 70vh; } }
+</style>

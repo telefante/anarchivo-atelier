@@ -1,0 +1,18 @@
+{
+  "name": "anarchivo",
+  "productName": "Anarchivo",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Anarchivo — Anarchivo Atelier como app de escritorio (Electron sobre el servidor local de dashboard/)",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "icono": "node build/icono.mjs",
+    "app": "node build/empaquetar.mjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^44.7.2"
+  }
+}

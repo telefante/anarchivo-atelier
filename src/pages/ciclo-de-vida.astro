@@ -1,0 +1,31 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../data/index.json';
+
+const cols = [
+  { t: 'Fuente', src: '07-proyectos/ (estado: fuente)', items: data.fuente },
+  { t: 'En curso', src: '07-proyectos/', items: data.encurso, hot: true },
+  { t: 'Publicado', src: '_dossier-projects/', items: data.publicado },
+  { t: 'Laboratorio', src: '_lab-projects/', items: data.laboratorio },
+];
+---
+<Base title="Ciclo de vida" sub="Fuente → en curso → publicado → laboratorio" active="ciclo">
+  <div class="cols">
+    {cols.map((c) => (
+      <section class={`col ${c.hot ? 'hot' : ''}`}>
+        <div>
+          <div class="row"><h2>{c.t}</h2><span class="count">{c.items.length}</span></div>
+          <small class="label" style="text-transform:none;letter-spacing:0;font-weight:400">{c.src}</small>
+        </div>
+        <div class="rule"></div>
+        {c.items.map((i) => (
+          <div class="card" style="padding:12px 14px;gap:4px">
+            <h3>{i.title}</h3>
+            <small>{i.path}</small>
+          </div>
+        ))}
+        {c.items.length === 0 && <p class="empty">Vacío</p>}
+      </section>
+    ))}
+  </div>
+</Base>

@@ -1,0 +1,21 @@
+# imagenes.yaml — catálogo de material visual de este proyecto.
+# Una imagen entra al dashboard cuando está listada aquí. Nada se infiere del contenido.
+# Campos: alt (descripción corta, alimenta la búsqueda), tags (vocabulario libre,
+# no el de concepts.ts), relacionadas (otras claves de este archivo, o
+# "otro-proyecto/archivo.ext" para cruzar proyectos), fecha, fuente (crédito,
+# solo si no es material propio), nota.
+
+patio.jpg:
+  alt: el patio visto desde arriba, con los círculos del eco
+  tags: [patio, eco]
+  relacionadas: [altavoz.jpg, mapa-de-ausencias/plano.jpg]
+  fecha: 2026-10-05
+  fuente:
+  nota: "imagen de ejemplo"
+
+altavoz.jpg:
+  alt: uno de los cuatro altavoces pequeños
+  tags: [altavoz]
+  relacionadas: []
+  fecha: 2026-10-05
+  fuente:

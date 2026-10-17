@@ -1,0 +1,8 @@
+# imagenes.yaml — catálogo de material visual de este proyecto (ver el de sonido-de-un-patio).
+
+plano.jpg:
+  alt: plano del barrio; en línea discontinua, los edificios que ya no están
+  tags: [plano, barrio]
+  relacionadas: [sonido-de-un-patio/patio.jpg]
+  fecha: 2026-09-28
+  fuente:

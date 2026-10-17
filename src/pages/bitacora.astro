@@ -1,0 +1,22 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../data/index.json';
+
+const dia = (d: string) =>
+  new Date(d + 'T12:00:00').toLocaleDateString('es', { weekday: 'long' }).replace(/^./, (c) => c.toUpperCase());
+---
+<Base title="Bitácora" sub="Más reciente arriba · solo lectura · entradas fechadas YYYY-MM-DD" active="bitacora">
+  <div class="timeline">
+    {data.bitacora.map((e) => (
+      <div class="entry">
+        <div class="d">{e.date}<small>{dia(e.date)}</small></div>
+        <div class="mk"></div>
+        <div class="card">
+          <h3 style="font-size:17px">{e.title}</h3>
+          {e.body && e.body !== e.title && <p style="margin:0;color:var(--muted)">{e.body}</p>}
+        </div>
+      </div>
+    ))}
+    {data.bitacora.length === 0 && <p class="empty">Sin entradas (¿bitacora.md con encabezados YYYY-MM-DD?).</p>}
+  </div>
+</Base>

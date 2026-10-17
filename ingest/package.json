@@ -1,0 +1,11 @@
+{
+  "name": "anarchivo-ingest",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "license": "MIT",
+  "description": "Servicio de Railway: recibe imágenes y artefactos desde el teléfono y los escribe en el playbook, en Nextcloud, por WebDAV",
+  "scripts": { "start": "node server.mjs" },
+  "engines": { "node": ">=20" },
+  "dependencies": { "sharp": "^0.35.5" }
+}

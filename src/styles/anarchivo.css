@@ -1,0 +1,815 @@
+/* Anarchivo — estilos globales (v4 · búsqueda y grafo, Mesa, Galería).
+   Global a propósito: casi toda la UI se crea con innerHTML desde el script,
+   así que estilos con scope (data-astro-cid) no la alcanzarían. */
+  .ax {
+    --faint: #cfcfcb; --faint-ink: #a5a59f; --chip: #ecece8; --accent-soft: #fbe4de;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    margin: 0; height: 100vh; overflow: hidden; background: var(--bg); color: var(--ink);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .ax { --faint: #3a3a36; --faint-ink: #6d6d66; --chip: #2a2a27; --accent-soft: #3a1f18; --shadow: 0 10px 30px rgba(0,0,0,.4); }
+    :root:not([data-theme='light']) .ax-search img { filter: invert(1); }
+  }
+  :root[data-theme='dark'] .ax { --faint: #3a3a36; --faint-ink: #6d6d66; --chip: #2a2a27; --accent-soft: #3a1f18; --shadow: 0 10px 30px rgba(0,0,0,.4); }
+  :root[data-theme='dark'] .ax-search img { filter: invert(1); }
+  .ax button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .ax button:disabled { cursor: not-allowed; opacity: .45; }
+  #ax-graph { position: fixed; inset: 0; width: 100vw; height: 100vh; touch-action: none; } /* los dedos son del grafo: desplazar y pellizcar (graph.js) */
+  .ax-veil { position: fixed; inset: 0; background: color-mix(in srgb, var(--bg) 45%, transparent); pointer-events: none; transition: opacity .4s; }
+  .ax:not([data-state='inicio']) .ax-veil { opacity: 0; }
+
+  .ax-word { position: fixed; left: 40px; top: 36px; font-weight: 500; font-size: 14px; letter-spacing: 3px; z-index: 3; }
+  .ax-modes { position: fixed; right: 40px; top: 28px; display: flex; gap: 10px; z-index: 3; }
+  .ax-seg.soft { background: var(--chip); }
+  .ax-publicar[hidden] { display: none; }
+  .ax .ax-seg button { padding: 7px 14px; border-radius: 999px; font-weight: 500; font-size: 11.5px; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); }
+  .ax .ax-seg button.on { background: var(--ink); color: var(--surface); }
+  .ax .ax-seg button.on.accent { background: var(--accent); color: #fff; }
+
+  /* 7 · Inicio */
+  /* la entrada: ventanita flotante (entrada.js) — se arrastra por la barra y se pliega a solo la barra */
+  .ax-entrada { position: fixed; left: 40px; top: 84px; width: min(400px, calc(100vw - 32px)); background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); z-index: 4; transition: opacity .3s; }
+  .ax:not([data-state='inicio']) .ax-entrada { opacity: 0; pointer-events: none; }
+  .ax-entrada-bar { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; cursor: grab; touch-action: none; user-select: none; }
+  .ax-entrada-bar:active { cursor: grabbing; }
+  .ax-entrada-title { flex: 1; font-weight: 500; font-size: 12px; letter-spacing: 2px; }
+  .ax-entrada-title span { color: var(--accent); }
+  .ax-entrada .ax-grip { color: var(--muted); letter-spacing: -2px; font-size: 11.5px; }
+  .ax .ax-fold { width: 26px; height: 26px; border-radius: 999px; background: var(--chip); color: var(--ink); font-weight: 500; font-size: 13px; line-height: 1; }
+  .ax-entrada-body { display: flex; flex-direction: column; gap: 14px; padding: 2px 14px 16px; }
+  .ax-entrada.folded { width: auto; min-width: 190px; }
+  .ax-entrada.folded .ax-entrada-body { display: none; }
+  .ax-search { display: flex; align-items: center; gap: 14px; background: var(--surface); border-radius: 40px; box-shadow: var(--shadow); }
+  .ax-search img { flex: none; }
+  .ax-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--ink); }
+  .ax-search input::placeholder { color: var(--muted); }
+  .ax-search input::-webkit-search-cancel-button { display: none; }
+  .ax-search--big { padding: 11px 16px; background: var(--chip); box-shadow: none; }
+  .ax-search--big input { font-size: 14.5px; }
+  .ax-sugerencias { display: flex; flex-direction: column; gap: 10px; }
+  .ax-kicker { display: block; font-weight: 500; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .ax-kicker.ink { color: var(--ink); }
+  button.ax-kicker { border: none; background: none; padding: 0; width: 100%; text-align: left; font-family: inherit; cursor: pointer; flex: none; }
+  button.ax-kicker::after { content: '  ▾'; }
+  .ax-col.collapsed button.ax-kicker::after { content: '  ▸'; }
+  .ax-nota { margin: 0; color: var(--muted); font-size: 13px; line-height: 21px; max-width: 700px; }
+
+  .ax-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ax .ax-pill { display: inline-flex; align-items: center; background: var(--surface); color: var(--ink); border-radius: 999px; padding: 5px 12px; font-weight: 500; font-size: 11.5px; letter-spacing: .3px; white-space: nowrap; }
+  .ax .ax-pill.lg { padding: 8px 16px; font-size: 13px; }
+  .ax .ax-pill.sm { padding: 4px 12px; font-size: 11px; background: var(--chip); }
+  .ax .ax-pill.soft { background: var(--accent-soft); color: var(--accent); }
+  .ax .ax-pill.accent { background: var(--accent); color: #fff; }
+  .ax .ax-pill.ink { background: var(--ink); color: var(--surface); }
+  .ax-muted { color: var(--muted); font-size: 11.5px; }
+
+  /* 8 / 9 · barra superior */
+  .ax-top { position: fixed; left: 40px; top: 84px; width: min(880px, calc(100vw - 520px)); display: flex; flex-direction: column; gap: 31px; z-index: 3; transition: opacity .3s; }
+  .ax[data-state='inicio'] .ax-top { opacity: 0; pointer-events: none; }
+  .ax-search--top { padding: 14px 26px; }
+  .ax-search--top input { font-size: 20px; font-weight: 500; caret-color: var(--accent); }
+  /* el buscador compacto también se pliega (entrada.js): queda la lupa y un «+» */
+  .ax-search--top .ax-fold { flex: none; margin-right: -12px; }
+  .ax-top.folded { gap: 14px; }
+  .ax-top.folded .ax-search--top { align-self: flex-start; padding: 8px 8px 8px 14px; gap: 8px; cursor: pointer; }
+  .ax-top.folded .ax-search--top input, .ax-top.folded #ax-qtype { display: none; }
+  .ax-top.folded .ax-search--top .ax-fold { margin-right: 0; }
+  .ax-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-left: 8px; }
+  .ax-sep { color: var(--muted); font-weight: 500; font-size: 14px; }
+
+  /* tarjetas flotantes: como mucho CAP() a la vez, se arrastran por la barra;
+     lo demás que tengas abierto vive en el dock, como ficha compacta —
+     el umbral entre opacidad y función: menos ventanas grandes a la vista,
+     pero nada se cierra, y un toque alcanza para volver a leerlo. */
+  /* z-index propio: sin esto, un .ax-float con z-index alto pero cuyo padre
+     (fixed, z-index:auto) no abre contexto de apilado puede terminar
+     compitiendo mal contra Carpetas/Lista — la tarjeta abierta siempre
+     tiene que quedar por encima de cualquier vista. */
+  .ax-windows { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
+  .ax-float { position: absolute; max-height: calc(100vh - 120px); display: flex; flex-direction: column; background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); pointer-events: auto; }
+  .ax[data-state='inicio'] .ax-windows, .ax[data-state='inicio'] .ax-dock { opacity: 0; pointer-events: none; transition: opacity .3s; }
+  .ax-handle { display: none; } /* solo tiene sentido como asa de una hoja que se arrastra — en escritorio no existe */
+  .ax-float-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 0; cursor: grab; touch-action: none; flex: none; }
+  .ax-float-bar:active { cursor: grabbing; }
+  .ax-grip { color: var(--faint-ink); font-size: 11px; letter-spacing: 2px; user-select: none; }
+  .ax-close { width: 26px; height: 26px; border-radius: 50%; font-size: 14px; line-height: 1; color: var(--muted); flex: none; }
+  .ax-close:hover { background: var(--chip); color: var(--ink); }
+  .ax-float-title { display: none; font-size: 11.5px; font-weight: 500; color: var(--ink); flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ax-float.collapsed .ax-float-title { display: block; }
+  .ax-float.collapsed .ax-float-body { display: none; }
+  .ax-float-body { overflow: auto; padding: 6px 24px 22px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* el dock: fichas de lo ya abierto, en una fila que crece hacia arriba —
+     un vistazo alcanza para saber qué tenés abierto sin que tape el grafo */
+  .ax-dock { position: fixed; left: 40px; right: 480px; bottom: 96px; display: flex; flex-wrap: wrap-reverse; align-content: flex-start; gap: 8px; z-index: 4; transition: opacity .3s; }
+  .ax-dock .ax-float.collapsed {
+    position: static; width: auto; max-width: 240px; border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .06);
+  }
+  .ax-dock .ax-float-bar { padding: 7px 8px 7px 14px; }
+  .ax-dock .ax-grip { display: none; }
+  .ax-dock .ax-float-title { max-width: 170px; }
+  .ax-group { display: flex; flex-direction: column; gap: 8px; }
+  .ax .ax-item { display: flex; flex-direction: column; gap: 1px; text-align: left; padding: 0; }
+  .ax-item b { font-weight: 500; font-size: 14.5px; }
+  .ax-item b i { font-style: normal; color: var(--muted); font-weight: 500; font-size: 12px; }
+  .ax-item span { color: var(--accent); font-weight: 500; font-size: 11.5px; }
+  .ax-item:hover b { color: var(--accent); }
+  .ax-desc { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
+  .ax-card-head { display: flex; flex-direction: column; gap: 6px; }
+  .ax-card-head h2 { margin: 0; font-size: 27px; font-weight: 500; line-height: 1.05; }
+  .ax-card-head code, .ax-texto { font-family: 'Roboto Mono', ui-monospace, monospace; }
+  .ax-card-head code { font-size: 11px; color: var(--muted); word-break: break-all; }
+  .ax-fields { display: grid; grid-template-columns: 72px 1fr; gap: 8px 10px; margin: 0; align-items: center; }
+  .ax-fields dt { color: var(--muted); font-weight: 500; font-size: 11.5px; }
+  .ax-fields dd { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .ax-val { font-size: 12px; }
+  .ax-texto { background: var(--chip); border-radius: 14px; padding: 12px 14px; font-size: 11.5px; line-height: 19px; white-space: pre-wrap; }
+  .ax-actions { display: flex; align-items: center; gap: 12px; }
+  /* medios de un proyecto (medios.js): mini-reproductor de audio y lista de PDF con visor */
+  .ax-medios .ax-kicker:not(:first-child) { margin-top: 8px; }
+  .ax-audio { display: flex; align-items: center; gap: 12px; background: var(--chip); border-radius: 14px; padding: 10px 14px 10px 10px; }
+  .ax .ax-audio [data-play] { flex: none; width: 36px; height: 36px; border-radius: 999px; background: var(--ink); color: var(--surface); font-size: 11px; line-height: 1; }
+  .ax .ax-audio.on [data-play] { background: var(--accent); color: #fff; font-size: 9.5px; }
+  .ax-audio-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .ax-audio-top { display: flex; align-items: center; gap: 8px; }
+  .ax-audio-top .ax-pill { flex: none; background: var(--surface); }
+  .ax-audio-main b { flex: 1; min-width: 0; font-weight: 500; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ax-audio-bar { height: 14px; display: flex; align-items: center; cursor: pointer; background: linear-gradient(var(--faint), var(--faint)) center / 100% 3px no-repeat; }
+  .ax-audio-bar i { display: block; height: 3px; width: 0; background: var(--accent); border-radius: 2px; }
+  .ax-audio-t { flex: none; min-width: 74px; text-align: right; font: 10px 'Roboto Mono', ui-monospace, monospace; color: var(--muted); }
+  .ax-audio-t:empty { display: none; }
+  a.ax-pdf-item { color: inherit; text-decoration: none; }
+  .ax-pdf { position: fixed; z-index: 8; display: flex; flex-direction: column; min-width: 280px; min-height: 240px; max-width: 100vw; max-height: 100vh; padding: 0 10px 12px; box-sizing: border-box; background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); resize: both; overflow: hidden; }
+  .ax-pdf-bar { display: flex; align-items: center; gap: 10px; padding: 10px 2px 10px 8px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; flex: none; }
+  .ax-pdf-bar:active { cursor: grabbing; }
+  .ax-pdf-bar .ax-grip { color: var(--muted); letter-spacing: -2px; font-size: 11.5px; }
+  .ax-pdf-bar b { flex: 1; min-width: 0; font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ax-pdf-bar a { text-decoration: none; }
+  .ax-pdf iframe { flex: 1; min-height: 0; width: 100%; border: 0; border-radius: 12px; background: var(--chip); }
+  .ax-pdf.moviendo iframe { pointer-events: none; }
+  .ax-btn { background: var(--accent); color: #fff; border-radius: 999px; padding: 10px 18px; font-weight: 500; font-size: 12px; letter-spacing: .3px; }
+  .ax button.ax-btn { background: var(--accent); color: #fff; } /* .ax button lo dejaba sin fondo */
+
+  /* siempre visible y clicable — incluso desde la pantalla en blanco, para
+     poder entrar directo a Carpetas (el ciclo de vida) sin buscar antes */
+  .ax-views { position: fixed; left: 50%; bottom: 38px; transform: translateX(calc(-50% - 210px)); z-index: 3; }
+  .ax-lista { position: fixed; left: 40px; top: 230px; bottom: 100px; width: min(880px, calc(100vw - 540px)); overflow: auto; display: none; flex-direction: column; gap: 18px; z-index: 2; background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); padding: 22px 24px; }
+  .ax[data-view='lista']:not([data-state='inicio']) .ax-lista { display: flex; }
+  .ax[data-view='lista'] #ax-graph { opacity: .15; }
+
+  /* Carpetas · el ciclo de vida fuente → en curso → publicado → laboratorio.
+     Flex (no grid) para que una columna contraída pueda encogerse a una
+     franja angosta y las demás repartirse el espacio que libera. */
+  .ax-carpetas { position: fixed; left: 40px; right: 40px; top: 230px; bottom: 100px; overflow: auto; display: none; gap: 18px; z-index: 2; }
+  .ax[data-view='carpetas']:not([data-state='inicio']) .ax-carpetas { display: flex; }
+  .ax[data-view='carpetas'] #ax-graph { opacity: .15; }
+
+  /* Constelaciones · las constelaciones guardadas como un grafo propio (constelas.js): un SVG aparte, con la
+     lista a la izquierda. Mismos signos que el grafo grande (aro de acento, hilos punteados); las imágenes, en miniatura. */
+  .ax-constelas { position: fixed; left: 40px; right: 40px; top: 230px; bottom: 100px; display: none; z-index: 2; background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); overflow: hidden; }
+  .ax[data-view='constelaciones']:not([data-state='inicio']) .ax-constelas { display: block; }
+  .ax[data-view='constelaciones'] #ax-graph { opacity: .15; }
+  .ax-constelas svg { width: 100%; height: 100%; display: block; cursor: grab; }
+  .ax-constelas svg:active { cursor: grabbing; }
+  /* aquí los hilos son la figura: en el rojo de acento, llenos y continuos (en el grafo grande siguen punteados y tenues) */
+  .ax-constelas .ax-l.constela { stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: none; opacity: 1; }
+  .ax-cg-lista { position: absolute; left: 20px; top: 20px; width: 230px; max-height: calc(100% - 40px); overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+  .ax-cg-vacio { margin: 0; padding: 40px; text-align: center; }
+  .ax-cg-n { cursor: pointer; }
+  .ax-cg-n image { clip-path: inset(0 round 6px); }
+  .ax-cg-n .marco { fill: none; stroke: var(--line); stroke-width: 1; }
+  .ax-cg-n:hover .marco { stroke: var(--accent); stroke-width: 1.6; }
+  .ax-cg-n text { font-size: 11px; font-weight: 500; fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; pointer-events: none; }
+  .ax-cg-n.constelacion text { font-size: 13px; font-weight: 500; }
+  .ax-cg-n:hover text { fill: var(--accent); }
+  .ax-col { flex: 1 1 0; min-width: 0; background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); padding: 20px 20px 22px; overflow: auto; display: flex; flex-direction: column; gap: 8px; transition: flex .25s ease; }
+  .ax-col.collapsed { flex: 0 0 64px; overflow: hidden; }
+  .ax-col.collapsed button.ax-kicker { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; margin: 0 auto; height: 100%; }
+
+  /* grafo — mismo lenguaje que /grafo (v2): islas de concepto por tamaño,
+     dos niveles de color, todo visible desde el principio; enfocar solo
+     atenúa (dim) lo que no resuena, en vez de apagar el mundo hasta buscar. */
+  .ax-l { fill: none; stroke: var(--faint); stroke-width: .8; transition: opacity .2s; }
+  .ax-l.visual, .ax-l.pertenece { opacity: .35; }
+  /* las áreas ya dicen «pertenece a este concepto»: las líneas concepto→miembro solo asoman al enfocar/buscar */
+  #ax-graph .ax-l.concepto { opacity: 0; }
+  #ax-graph.lit .ax-l.concepto:not(.dim) { opacity: .8; }
+  /* áreas (conjuntos): una mancha por concepto, más opaca donde hay más obras por área; se acumulan en las intersecciones */
+  .ax-blob { fill: var(--ink); fill-opacity: calc(.012 + .03 * var(--d, .5)); stroke: var(--ink); stroke-opacity: .32; stroke-width: 1; stroke-dasharray: 3 5; vector-effect: non-scaling-stroke; cursor: grab; transition: fill-opacity .3s, stroke-opacity .3s, opacity .4s; }
+  .ax-blob:hover { fill-opacity: calc(.1 + .08 * var(--d, .5)); stroke-opacity: .8; stroke-dasharray: none; }
+  .ax-blob.dim { opacity: .25; }
+  .ax-blob.away { opacity: 0; pointer-events: none; }
+  .ax-l.relacion { stroke: var(--accent); stroke-width: 1.4; opacity: .85; }
+  .ax-l.menciona, .ax-l.carpeta { stroke-dasharray: 3 3; }
+  .ax-l.dim { opacity: .12; }
+  .ax-n { cursor: grab; touch-action: none; transition: opacity .2s; }
+  .ax-n:active { cursor: grabbing; }
+  .ax-n.dim { opacity: .15; }
+  .ax-n .shape { transition: fill .2s; }
+  .ax-n .hit { fill: transparent; stroke: none; }
+  .ax-n.concepto .shape { fill: var(--ink); stroke: none; opacity: .55; }
+  .ax-n.activo .shape, .ax-n.convocatoria .shape { fill: var(--accent); stroke: var(--surface); stroke-width: 1.2; }
+  .ax-n.laboratorio .shape { fill: var(--accent); stroke: var(--surface); stroke-width: 1.2; stroke-dasharray: 2 2; }
+  /* artefacto: un objeto, no un proceso — tinta llena con aro, ni acento (vivo) ni apagado (registro) */
+  .ax-n.artefacto .shape { fill: var(--ink); stroke: var(--surface); stroke-width: 1.6; }
+  /* constelación: un conjunto todavía abierto — aro de acento, hueco; sus hilos, punteados */
+  .ax-n.constelacion .shape { fill: var(--surface); stroke: var(--accent); stroke-width: 1.8; }
+  .ax-l.constela { stroke: var(--accent); stroke-dasharray: 1 4; opacity: .6; }
+  .ax-n.publicado .shape, .ax-n.bitacora .shape, .ax-n.ensayo .shape { fill: var(--muted); stroke: var(--surface); stroke-width: 1; }
+  .ax-n .ax-lbl { font-size: 11px; font-weight: 500; fill: var(--ink); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; pointer-events: none; }
+  .ax-n.activo .ax-lbl, .ax-n.laboratorio .ax-lbl { font-weight: 500; }
+  .ax-n.focus .shape { fill: var(--accent) !important; stroke: none !important; stroke-dasharray: none !important; }
+  .ax-n.focus .ax-lbl { font-size: 14px; font-weight: 500; fill: var(--accent); }
+  /* niveles de detalle (graph.js · setDetail): lo oculto sigue en el layout, la figura no se mueve */
+  .ax-n.hid, .ax-l.hid { display: none; }
+  #ax-graph.lv0 .ax-n:not(.concepto) .ax-lbl, #ax-graph.lv1 .ax-n:not(.concepto):not(.activo) .ax-lbl { display: none; }
+  .ax-n.q .ax-lbl { display: none; }
+  #ax-graph.lit .ax-n:not(.dim) .ax-lbl { display: block; }
+  .ax-n.concepto .ax-lbl { text-anchor: middle; font-size: 10px; font-weight: 500; letter-spacing: .22em; fill: var(--muted); }
+  #ax-graph.lv0 .ax-n.concepto .ax-lbl { font-size: 11.5px; }
+  .ax-n.concepto.focus .ax-lbl { fill: var(--accent); font-size: 12px; }
+  .ax-detail { position: fixed; right: 40px; bottom: 38px; z-index: 3; }
+  .ax:not([data-view='grafo']) .ax-detail { display: none; }
+  .ax-halo { fill: var(--accent); opacity: .15; pointer-events: none; }
+
+  /* tarjeta de una imagen (grafo/lista → tarjeta flotante) */
+  .ax-card-img { width: 100%; max-height: 260px; object-fit: contain; background: var(--chip); border-radius: 10px; margin: 4px 0; }
+
+  /* Mesa · Figma v4, frame «10 · Mesa: imágenes». Mesa de luz con retícula
+     de puntos; módulos blancos (radio 10) arrastrables; panel «Entre dos
+     imágenes» a la derecha; leyenda + ayuda abajo a la izquierda,
+     herramientas abajo a la derecha, vistas corridas a la izquierda. */
+  .ax-mesa, .mx-panel { display: none; }
+  .ax[data-view='mesa'] .ax-mesa { display: block; }
+  .ax[data-view='mesa'] .mx-panel.open { display: flex; }
+  .ax[data-view='mesa'] #ax-graph { display: none; }
+  .ax[data-view='mesa'] .ax-views { position: static; transform: none; }
+  .ax[data-view='mesa'] .ax-dock { bottom: calc(var(--mx-barra, 240px) + 16px); }
+
+  .ax-mesa { position: fixed; inset: 0; z-index: 1; overflow: hidden; cursor: default; touch-action: none;
+    background-color: var(--bg); background-image: radial-gradient(circle, var(--faint) 0.9px, transparent 1.1px); background-size: 24px 24px; }
+  .ax-mesa.panning { cursor: grabbing; }
+  .mx-stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .mx-lines, .mx-dots { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+  .mx-dots { z-index: 100000; }
+  .mx-vacio { position: absolute; left: 40px; top: 240px; color: var(--muted); font-size: 13px; max-width: 520px; }
+  .mx-vacio code { font-family: 'Roboto Mono', ui-monospace, monospace; font-size: 11.5px; }
+
+  .mx-mod { position: absolute; display: flex; flex-direction: column; gap: 7px; padding: 8px 8px 10px; background: var(--surface); border-radius: 10px; box-shadow: var(--shadow); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; transition: opacity .2s, box-shadow .15s; }
+  .mx-mod:active { cursor: grabbing; }
+  .mx-mod.sel { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+  .mx-mod.par:not(.sel) { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent), var(--shadow); }
+  .mx-mod.dim { opacity: .2; }
+  .mx-anim .mx-mod { transition: left .6s cubic-bezier(.3,.7,.2,1), top .6s cubic-bezier(.3,.7,.2,1), opacity .2s; }
+  .mx-img { position: relative; border-radius: 4px; overflow: hidden; background: var(--chip); min-height: 40px; }
+  .mx-img img { display: block; width: 100%; height: auto; pointer-events: none; }
+  .mx-tint { position: absolute; inset: 0; mix-blend-mode: color; opacity: 0; pointer-events: none; transition: opacity .25s, background .25s; }
+  .mx-cap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font-size: 11px; line-height: 1.25; }
+  .mx-cap b { font-weight: 500; }
+  .mx-cap span { font-weight: 500; color: var(--muted); }
+  .mx-cap .mx-sim { font-style: normal; font-weight: 500; color: var(--accent); }
+  .mx-cap .mx-sim:empty { display: none; }
+  .ax .mx-exp { position: absolute; left: -9px; top: calc(50% - 22px); min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--surface); border: 2px solid var(--ink); font-size: 9.5px; font-weight: 600; line-height: 14px; cursor: pointer; opacity: 0; transition: opacity .15s; }
+  .ax .mx-exp[hidden] { display: none; }
+  .ax .mx-mod:hover .mx-exp, .ax .mx-mod.sel .mx-exp, .ax .mx-mod.abierta .mx-exp { opacity: 1; }
+  .ax .mx-mod.abierta .mx-exp { background: var(--ink); color: var(--surface); }
+  /* × baja a la esquina inferior izquierda: arriba a la derecha va la nota (✎) */
+  .ax .mx-x { position: absolute; left: -8px; bottom: -8px; width: 18px; height: 18px; padding: 0; border-radius: 50%; background: var(--surface); border: 1.5px solid var(--faint-ink); font-size: 11px; line-height: 14px; color: var(--muted); cursor: pointer; opacity: 0; transition: opacity .15s; }
+  .ax .mx-mod:hover .mx-x { opacity: 1; }
+  /* ⋯ · ficha mínima: proyecto, archivo y (en local) Mostrar en Finder */
+  .ax .mx-i { position: absolute; left: -11px; top: -11px; width: 26px; height: 26px; padding: 0 0 6px; box-sizing: border-box; border-radius: 50%; background: var(--surface); border: 2px solid var(--ink); font-size: 14.5px; font-weight: 600; line-height: 1; color: var(--ink); cursor: pointer; opacity: 1; z-index: 2; box-shadow: var(--shadow); transform: scale(var(--ik, 1)); transform-origin: 11px 11px; transition: opacity .15s, background .15s, color .15s; }
+  .ax .mx-mod:hover .mx-i, .ax .mx-mod.sel .mx-i, .ax .mx-fig:hover .mx-i { opacity: 1; }
+  .ax .mx-i:hover { background: var(--ink); color: var(--surface); }
+  /* ✎ · nota de la imagen (esquina superior derecha); llena de acento cuando ya hay una */
+  .ax .mx-n { position: absolute; right: -11px; top: -11px; width: 26px; height: 26px; padding: 0; box-sizing: border-box; border-radius: 50%; background: var(--surface); border: 2px solid var(--ink); font-size: 12px; line-height: 1; color: var(--ink); cursor: pointer; opacity: 1; z-index: 2; box-shadow: var(--shadow); transform: scale(var(--ik, 1)); transform-origin: 15px 11px; transition: opacity .15s, background .15s, color .15s; }
+  .ax .mx-n[hidden] { display: none; }
+  .ax .mx-mod:hover .mx-n, .ax .mx-mod.sel .mx-n, .ax .con-nota .mx-n, .ax .mx-fig:hover .mx-n { opacity: 1; }
+  .ax .con-nota .mx-n { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .ax .mx-n:hover { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+  /* de lejos (.lejos, ver applyView) los dos se reducen a un punto en su esquina, con zona de clic generosa:
+     ⋯ = punto lleno · ✎ = aro (lleno de acento si ya hay nota) */
+  .ax .lejos .mx-i, .ax .lejos .mx-n { width: 10px; height: 10px; padding: 0; font-size: 0; box-shadow: none; transform-origin: 5px 5px; }
+  .ax .lejos .mx-i { left: -5px; top: -5px; background: var(--ink); }
+  .ax .lejos .mx-n { right: -5px; top: -5px; }
+  .ax .lejos .mx-i::after, .ax .lejos .mx-n::after { content: ''; position: absolute; inset: -8px; border-radius: 50%; }
+  /* en Alineado van dentro de la figura: las filas están pegadas y afuera pisarían a la vecina */
+  .ax .mx-fig .mx-i { left: 12px; top: 12px; }
+  .ax .mx-fig .mx-n { right: 12px; top: 12px; }
+  .mx-notaw { position: fixed; z-index: 9; display: flex; flex-direction: column; gap: 10px; width: 340px; max-width: calc(100vw - 16px); box-sizing: border-box; padding: 10px 14px 14px; background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); }
+  .mx-notaw[hidden] { display: none; }
+  .mx-notaw-bar { display: flex; align-items: baseline; gap: 10px; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; }
+  .mx-notaw-bar b { flex: 1; min-width: 0; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ax .mx-notaw-bar button { font-size: 15px; line-height: 1; color: var(--muted); padding: 2px 4px; }
+  .mx-notaw textarea { box-sizing: border-box; width: 100%; border: 0; outline: 0; resize: vertical; background: var(--chip); color: var(--ink); border-radius: 12px; padding: 10px 12px; font: 11.5px/17px 'Roboto Mono', ui-monospace, monospace; }
+  .mx-notaw textarea:focus { box-shadow: 0 0 0 2px var(--accent-soft); }
+  .mx-notaw-pie { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .mx-notaw-pie .ax-muted { font-size: 11px; overflow-wrap: anywhere; }
+  .ax .mx-notaw .ax-btn { padding: 7px 16px; font-size: 11.5px; flex: none; }
+  .ax .mx-notaw .ax-btn:disabled { opacity: .5; }
+  .ax .mx-notaw .ax-btn[hidden] { display: none; }
+  .mx-ficha { position: fixed; z-index: 8; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: 320px; padding: 12px 14px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); }
+  .mx-ficha[hidden] { display: none; }
+  .mx-ficha code { font: 10px/13px 'Roboto Mono', ui-monospace, monospace; color: var(--muted); overflow-wrap: anywhere; user-select: text; }
+  .mx-ficha .ax-muted:empty { display: none; }
+  .ax .mx-ficha .ax-pill:not(.ink) { background: var(--chip); }
+  .ax[data-foco='1'] .mx-x { display: none; }
+  .ax .mx-x:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .mx-hilo { position: absolute; right: -7px; top: calc(50% - 22px); width: 14px; height: 14px; box-sizing: border-box; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); cursor: crosshair; opacity: 0; transition: opacity .15s; }
+  .mx-mod:hover .mx-hilo, .mx-mod.sel .mx-hilo { opacity: 1; }
+  .mx-rs { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; border-bottom-right-radius: 10px; opacity: 0; transition: opacity .15s;
+    background: linear-gradient(135deg, transparent 55%, var(--faint-ink) 55%, var(--faint-ink) 62%, transparent 62%, transparent 75%, var(--faint-ink) 75%, var(--faint-ink) 82%, transparent 82%); }
+  .mx-mod:hover .mx-rs { opacity: 1; }
+
+  .mx-l { vector-effect: non-scaling-stroke; fill: none; }
+  .mx-l.rel { stroke: var(--accent); stroke-width: 3; }
+  .mx-l.yaml { stroke: var(--ink); stroke-width: 1.5; }
+  .mx-l.visual { stroke: color-mix(in srgb, var(--accent) 60%, var(--muted)); stroke-width: 1.2; stroke-dasharray: 3 3; }
+  .mx-l.cerca { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 4; }
+  .mx-l.hilo { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 1 6; stroke-linecap: round; }
+  .mx-l.tirando { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; }
+  .mx-dot { pointer-events: all; cursor: pointer; }
+  .mx-dot circle { fill: var(--surface); stroke: var(--faint-ink); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+  .mx-dot text { font-size: 10px; font-weight: 500; fill: var(--ink); text-anchor: middle; pointer-events: none; }
+  .mx-dot.yaml circle { stroke: var(--ink); }
+  .mx-dot.rel circle, .mx-dot.nota circle { stroke: var(--accent); stroke-width: 2; }
+  .mx-dot.on circle { fill: var(--accent); stroke: var(--accent); }
+  .mx-dot.on text { fill: #fff; }
+  .mx-dot:hover circle { stroke: var(--accent); }
+
+  /* Barra inferior (Figma v6). Fuera de la Mesa la barra se disuelve
+     (display: contents) y solo queda «Vista», fija donde siempre. En la Mesa
+     es una rejilla anclada a la izquierda: grupos con nombre y sitio fijo.
+     Tres formas, tres significados: pista (.ax-seg) = uno entre varios ·
+     punto (.mx-int) = interruptor · signo (.mx-acc) = acción de una vez.
+     Lo que no aplica en un modo se atenúa en su sitio, no se quita. */
+  .ax:not([data-view='mesa']) .mx-barra, .ax:not([data-view='mesa']) .mx-donde, .ax:not([data-view='mesa']) .mx-g--vista { display: contents; }
+  .ax:not([data-view='mesa']) .mx-barra > :not(.mx-donde), .ax:not([data-view='mesa']) .mx-donde > :not(.mx-g--vista), .ax:not([data-view='mesa']) .mx-g--vista > .mx-k { display: none; }
+  .mx-barra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; flex-direction: column; gap: 14px 24px; padding: 14px 40px 30px; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--chip); }
+  .mx-hoja { display: contents; }
+  .mx-tira { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 24px; min-width: 0; }
+  .mx-g { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 57px; transition: opacity .2s; }
+  .mx-k { font-weight: 500; font-size: 9.5px; line-height: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
+  .ax[data-mx='galeria'] .mx-g[data-solo='mesa'], .ax[data-mx='mesa'] .mx-g[data-solo='galeria'] { opacity: .28; pointer-events: none; }
+  .mx-ayuda { margin: 0; font-size: 11px; font-weight: 500; }
+  .ax[data-mx='galeria'] .mx-ayuda { visibility: hidden; }
+  .mx-ints { display: flex; align-items: center; gap: 0 6px; min-height: 37px; }
+  .mx-barra .ax-seg button { white-space: nowrap; }
+  .ax .mx-int { display: inline-flex; align-items: center; gap: 7px; padding: 7px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+  .ax .mx-int:not([data-mx-lcapa])::before { content: ''; box-sizing: border-box; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--muted); }
+  .ax .mx-int.on { color: var(--ink); }
+  .ax .mx-int.on::before { background: var(--accent); border-color: var(--accent); }
+  .ax .mx-int:hover { color: var(--ink); }
+  /* las líneas llevan su propio trazo como punto: encendida se ve como se dibuja, apagada se tacha */
+  .ax .mx-int[data-mx-lcapa]:not(.on) { opacity: .4; text-decoration: line-through; }
+  .ax .mx-acc, .ax .mx-orden button { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px; background: var(--surface); font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+  .ax .mx-acc:hover, .ax[data-mx='mesa'] .mx-orden button:hover { background: var(--chip); }
+  .mx-s { font-style: normal; font-weight: 500; color: var(--accent); }
+  .ax .mx-acc[hidden] { display: none; }
+  .ax .mx-acc:disabled { opacity: .6; cursor: progress; }
+  .mx-cuenta { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 31px; border-radius: 999px; background: var(--surface); font-size: 11.5px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .mx-cuenta.on { color: var(--ink); }
+  /* «ordenar» guarda su sitio y cambia de forma: en Libre son dos acciones, en Alineado una pista con el criterio vigente */
+  .mx-orden { display: inline-flex; align-items: center; gap: 6px; padding: 3px 0; border-radius: 999px; min-width: 270px; box-sizing: border-box; }
+  .ax[data-mx='galeria'] .mx-orden { gap: 0; padding: 3px; background: var(--surface); }
+  .ax[data-mx='galeria'] .mx-orden button { background: none; font-weight: 500; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); }
+  .ax[data-mx='galeria'] .mx-orden button.on { background: var(--ink); color: var(--surface); }
+  .ax[data-mx='galeria'] .mx-orden .mx-s { display: none; }
+  .mx-tam { display: inline-flex; align-items: center; height: 37px; }
+  .mx-tam input { width: 120px; accent-color: var(--accent); }
+  /* «ver» se pliega en un resumen de una línea, como el buscador */
+  .ax .mx-pliegue { margin-left: auto; margin-bottom: 3px; width: 31px; height: 31px; border-radius: 50%; background: var(--surface); font-weight: 500; }
+  .ax .mx-resumen { display: none; flex: 1; min-width: 0; align-items: center; gap: 14px; padding: 9px 16px; margin-bottom: 1px; border-radius: 999px; background: var(--surface); font-size: 11.5px; font-weight: 500; text-align: left; white-space: nowrap; overflow: hidden; }
+  .mx-ver.plegada .mx-g:not(.mx-g--tam) { display: none; }
+  .ax .mx-ver.plegada .mx-resumen { display: inline-flex; }
+  .mx-ver.plegada .mx-g--tam { min-height: 0; }
+  .mx-ver.plegada .mx-g--tam .mx-k { display: none; }
+  .ax[data-mx='galeria'] #mx-resumen-txt { opacity: .28; }
+  .mx-herr-seg { display: none; }
+  /* ventana baja (portátil): la barra no puede comerse la mesa — el nombre de
+     cada grupo pasa a su izquierda, se aprietan los márgenes y la ayuda se va */
+  @media (max-height: 800px) and (min-width: 641px) {
+    .mx-barra { gap: 8px 24px; padding-top: 10px; padding-bottom: 14px; }
+    .mx-tira { gap: 8px 24px; }
+    .mx-ayuda { display: none; }
+    .mx-g { flex-direction: row; align-items: center; gap: 10px; min-height: 37px; }
+    .ax .mx-pliegue, .ax .mx-resumen { margin-bottom: 3px; }
+  }
+  /* con sitio de sobra, «dónde estoy» y «qué hago» comparten la fila de abajo:
+     las dos tiras se disuelven y sus grupos se ordenan en una sola línea */
+  @media (min-width: 1580px) and (min-height: 801px), (min-width: 1920px) {
+    .mx-barra { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
+    .mx-ayuda, .mx-ver { flex: 0 0 100%; }
+    .mx-hacer, .mx-donde { display: contents; }
+    .mx-ver { order: 1; }
+    .mx-donde > .mx-g { order: 2; }
+    .mx-hacer > .mx-g { order: 3; }
+    .mx-g--fin { margin-left: auto; }
+    .mx-donde > .mx-g--salida { order: 4; }
+  }
+  .mx-chip { display: inline-flex; align-items: center; background: var(--surface); border-radius: 999px; padding: 2px 4px; }
+  .ax .mx-chip button { padding: 3px 8px; font-size: 11px; font-weight: 500; border-radius: 999px; color: var(--muted); }
+  .ax .mx-chip button:first-child { color: var(--ink); }
+  .ax .mx-chip button:hover { background: var(--chip); }
+  .ax .mx-chip.off button:first-child { color: var(--faint-ink); text-decoration: line-through; }
+  .ax .mx-chip.solo { background: var(--ink); }
+  .ax .mx-chip.solo button { color: var(--surface); }
+  .mx-int .k { display: inline-block; width: 16px; height: 0; }
+  .mx-int .k.hilo { border-top: 3px solid var(--accent); }
+  .mx-int .k.yaml { border-top: 1.5px solid var(--ink); }
+  .mx-int .k.visual { border-top: 1.2px dashed color-mix(in srgb, var(--accent) 60%, var(--muted)); }
+  .mx-int .k.cerca { border-top: 1.5px dashed var(--muted); }
+  .mx-int .k.semejanza { border-top: 2px dotted var(--muted); }
+
+  .mx-panel { position: fixed; right: 40px; top: 200px; width: 340px; box-sizing: border-box; max-height: calc(100vh - 216px - var(--mx-barra, 240px)); overflow: auto; z-index: 5; flex-direction: column; gap: 14px; padding: 16px 24px 22px; background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); }
+  .mx-panel-head { display: flex; align-items: center; justify-content: space-between; }
+  .mx-par { display: flex; align-items: center; gap: 10px; }
+  .mx-par img { height: 116px; width: auto; max-width: 170px; object-fit: cover; border-radius: 6px; background: var(--chip); min-width: 0; }
+  .mx-par span { color: var(--muted); font-weight: 500; font-size: 15px; }
+  .mx-par-t { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+  .mx-par-t b { font-weight: 500; font-size: 13px; }
+  .mx-par-t i { font-style: normal; font-weight: 500; font-size: 11.5px; color: var(--muted); }
+  .mx-stats { display: grid; grid-template-columns: 76px 1fr; gap: 9px 10px; margin: 0; align-items: center; }
+  .mx-stats dt { color: var(--muted); font-weight: 500; font-size: 11.5px; }
+  .mx-stats dd { margin: 0; display: flex; align-items: center; gap: 10px; }
+  .mx-bar { flex: 1; max-width: 150px; height: 6px; border-radius: 3px; background: var(--chip); overflow: hidden; }
+  .mx-bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .2s; }
+  .mx-bar.ink i { background: var(--ink); }
+  .mx-pct { font-size: 12px; }
+  .mx-nota { display: flex; flex-direction: column; gap: 8px; }
+  .mx-nota span { font-size: 11px; font-weight: 500; color: var(--muted); }
+  .mx-panel textarea { box-sizing: border-box; width: 100%; border: 0; outline: 0; resize: vertical; background: var(--chip); color: var(--ink); border-radius: 14px; padding: 12px 14px; font: 11.5px/17px 'Roboto Mono', ui-monospace, monospace; }
+  .mx-panel textarea:focus { box-shadow: 0 0 0 2px var(--accent-soft); }
+
+  /* Galería · todas las imágenes, en filas a la misma altura (--gh), sin
+     recortar; mismo módulo blanco que la mesa. */
+  .mx-galeria { display: none; }
+  .ax[data-view='mesa'][data-mx='galeria'] .mx-galeria { display: flex; }
+  .ax[data-mx='galeria'] .mx-panel { display: none !important; }
+  .ax[data-mx='galeria'] .mx-stage { visibility: hidden; }
+  .ax[data-mx='galeria'] .mx-vacio { display: none; }
+  .mx-galeria { position: fixed; left: 40px; right: 40px; top: 220px; bottom: calc(var(--mx-barra, 240px) + 12px); z-index: 2; overflow: auto; flex-direction: column; gap: 32px; padding: 4px 4px 24px; }
+  .mx-galeria section { display: flex; flex-direction: column; gap: 12px; }
+  .mx-fila { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; align-items: start; }
+  .mx-fig { position: relative; flex: none; margin: 0; display: flex; flex-direction: column; gap: 7px; padding: 8px 8px 10px; background: var(--surface); border-radius: 10px; box-shadow: var(--shadow); cursor: zoom-in; transition: opacity .2s, transform .15s, box-shadow .15s; }
+  .mx-fig:hover { transform: translateY(-2px); }
+  .mx-fig.sel { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+  .mx-fig.dim { opacity: .2; }
+  .mx-fig img { display: block; height: var(--gh, 220px); width: auto; max-width: calc(100vw - 112px); object-fit: contain; border-radius: 4px; background: var(--chip); }
+  /* el pie no ensancha la figura: toma el ancho de la imagen */
+  .mx-fig figcaption { width: 0; min-width: 100%; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font-size: 11px; line-height: 1.25; }
+  .mx-fig figcaption b { font-weight: 500; }
+  .mx-fig figcaption span { font-weight: 500; color: var(--muted); }
+  .mx-fig figcaption i { flex-basis: 100%; font-style: normal; font-weight: 500; color: var(--faint-ink); }
+  .mx-eslabon { align-self: center; font-size: 11px; font-weight: 500; color: var(--accent); white-space: nowrap; }
+
+  .mx-lb { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; gap: 24px; padding: 40px; box-sizing: border-box; background: color-mix(in srgb, var(--bg) 94%, transparent); }
+  .mx-lb[hidden] { display: none; }
+  .mx-lb figure { margin: 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .mx-lb img { display: block; max-width: calc(100vw - 240px); max-height: calc(100vh - 190px); border-radius: 6px; box-shadow: var(--shadow); background: var(--chip); }
+  .mx-lb figcaption { font-size: 13px; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 8px; align-items: baseline; }
+  .mx-lb figcaption b { font-weight: 500; }
+  .mx-lb figcaption span, .mx-lb figcaption i { font-style: normal; font-weight: 500; color: var(--muted); }
+  .mx-lb figcaption em { font-style: normal; font-weight: 500; color: var(--accent); }
+  .ax .mx-lb-nav { flex: none; width: 56px; height: 56px; border-radius: 50%; font-size: 34px; line-height: 1; color: var(--muted); }
+  .ax .mx-lb-nav:hover:not(:disabled) { background: var(--chip); color: var(--ink); }
+  .ax .mx-lb-x { position: absolute; top: 28px; right: 40px; width: 36px; height: 36px; font-size: 19px; }
+
+  .mx-constel-modal { position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--bg) 94%, transparent); }
+  .mx-constel-modal[hidden] { display: none; }
+  .mx-constel-inner { background: var(--surface); border-radius: 20px; padding: 32px; width: 420px; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 14px; }
+  .mx-constel-inner h2 { margin: 0; font-size: 15px; font-weight: 500; }
+  .mx-constel-inner p { margin: 0; font-size: 11.5px; color: var(--muted); }
+  .mx-constel-inner label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; font-weight: 500; }
+  .mx-constel-inner [hidden] { display: none; }
+  .mx-constel-inner .ax-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mx-constel-inner .ax-pills:empty { display: none; }
+  .mx-constel-btns button:disabled { opacity: .6; cursor: progress; }
+  /* panel flotante de una constelación (cards.js · constelHtml): imágenes, textos enlazados, notas */
+  .ax-cst-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .ax .ax-cst-grid button { position: relative; padding: 0; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--chip); }
+  .ax-cst-grid img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s; }
+  .ax-cst-grid button:hover img { transform: scale(1.05); }
+  .ax-cst-grid i { position: absolute; right: 5px; bottom: 5px; font-style: normal; font-size: 10px; line-height: 18px; width: 18px; text-align: center; border-radius: 999px; background: var(--accent); color: #fff; }
+  .ax-item em { font-style: normal; color: var(--muted); font-size: 11.5px; line-height: 18px; }
+  .ax .ax-cst-nota { display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 10px 12px; border-radius: 12px; background: var(--chip); font-size: 11.5px; line-height: 19px; white-space: pre-wrap; }
+  .ax-cst-nota img { flex: none; width: 44px; height: 44px; object-fit: cover; border-radius: 8px; }
+  .ax-cst-nota span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .ax-cst-nota b { font-weight: 500; font-size: 11px; color: var(--muted); }
+  /* lista de constelaciones en el panel de la mesa */
+  .mx-cst { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .mx-cst .ax-item { flex: 1; min-width: 0; }
+  .mx-cst .ax-item b { font-size: 13px; }
+  .mx-constel-inner input, .mx-constel-inner textarea, .mx-constel-inner select { font: inherit; border: 1px solid var(--faint); border-radius: 8px; padding: 8px 10px; background: var(--chip); color: var(--ink); }
+  .mx-constel-inner textarea { resize: vertical; min-height: 60px; }
+  .mx-constel-btns { display: flex; gap: 10px; }
+  .mx-constel-btns button { flex: 1; padding: 10px 14px; border-radius: 8px; font-weight: 500; border: 0; cursor: pointer; }
+  .mx-constel-btns #mx-constel-ok { background: var(--accent); color: #fff; }
+  .mx-constel-btns #mx-constel-cancel { background: var(--chip); color: var(--ink); }
+
+  /* pantallas táctiles: como una app — sin pellizco ni doble toque para ampliar la página, sin rebote */
+  @media (pointer: coarse) {
+    html:has(.ax), .ax { touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+    .ax { height: 100dvh; }
+    /* iOS amplía la página al enfocar un campo con letra de menos de 16px, y no vuelve sola */
+    .ax .ax-search input, .ax textarea, .ax .mx-constel-inner input { font-size: 14px; }
+  }
+
+  @media (max-width: 900px) {
+    .mx-galeria { left: 16px; right: 16px; }
+    .mx-barra { padding-left: 16px; padding-right: 16px; }
+    .ax-top { width: calc(100vw - 32px); left: 16px; }
+    .ax-modes { right: 16px; }
+    .ax-word { left: 16px; }
+    .ax-views { transform: translateX(-50%); }
+    .ax-lista, .ax-carpetas, .ax-constelas { left: 16px; right: 16px; width: auto; }
+    .ax-cg-lista { display: none; }
+    .ax-carpetas { flex-direction: column; }
+    .ax-col.collapsed { flex: 0 0 44px; }
+    .ax-col.collapsed button.ax-kicker { writing-mode: horizontal-tb; transform: none; margin: 0; height: auto; }
+  }
+
+  /* móvil: todo más chico, y las tarjetas van plegadas y apiladas abajo en
+     vez de flotar — en un teléfono no hay dónde correrlas ni sitio para
+     leerlas a tamaño de escritorio. */
+  @media (max-width: 640px) {
+    .ax-word { font-size: 11px; letter-spacing: 2px; top: 16px; }
+    .ax-modes { top: 12px; gap: 6px; }
+    .ax-publicar, .ax-conversar, .ax-ajustes { display: none; } /* no cabe junto al logotipo; publicar se hace desde el escritorio */
+    .ax .ax-seg button, .ax .ax-seg a { padding: 5px 9px; font-size: 9.5px; letter-spacing: .4px; }
+
+    .ax-entrada { left: 16px; right: 16px; top: 56px; width: auto; }
+    .ax-entrada-body { gap: 10px; }
+    .ax-search--big { padding: 12px 16px; border-radius: 24px; gap: 10px; }
+    .ax-search--big img { width: 18px; height: 18px; }
+    .ax-kicker { font-size: 9.5px; }
+    .ax-nota { font-size: 11px; line-height: 16px; }
+    .ax .ax-pill.lg { padding: 6px 12px; font-size: 11px; }
+
+    .ax-top { top: 60px; gap: 16px; }
+    .ax-search--top { padding: 10px 16px; border-radius: 24px; }
+    .ax-search--top input { font-size: 14px; }
+    .ax-search input::placeholder { font-size: 12px; } /* el campo va a 16px (iOS); la ayuda, más chica para que quepa */
+    .ax-search--top img { width: 18px; height: 18px; }
+    .ax-search--top .ax-fold { margin-right: -8px; }
+    .ax .ax-pill { font-size: 10px; padding: 4px 9px; }
+    .ax .ax-pill.sm { font-size: 9.5px; padding: 3px 8px; }
+    .ax-muted { font-size: 10px; }
+    .ax-sep { font-size: 11.5px; }
+
+    .ax-card-head h2 { font-size: 16px; }
+    .ax-desc { font-size: 11px; }
+    .ax-item b { font-size: 12px; }
+    .ax-item b i { font-size: 11px; }
+    .ax-item span { font-size: 10px; }
+    .ax-texto { font-size: 11px; line-height: 17px; }
+    .ax-card-head code { font-size: 9.5px; }
+    .ax-btn { padding: 8px 14px; font-size: 11px; }
+
+    .ax-views { bottom: 12px; }
+    .ax-detail { right: 16px; bottom: 54px; } /* encima de las vistas, no sobre ellas */
+    .ax-modes [aria-label='Lectura o edición'] { display: none; } /* no cabe junto al logotipo, y hoy no cambia nada */
+
+    /* el grafo ocupa siempre toda la pantalla, también con foco o búsqueda (antes, v5, se recortaba a una
+       franja de 34vh arriba). La hoja inferior sube encima de él; plegada, deja el grafo entero a la vista. */
+    #ax-graph { height: 100dvh; }
+
+    /* v5 · hoja inferior: una sola tarjeta a la vez (CAP()=1 en el
+       teléfono) sube desde abajo como una hoja real — manija arriba,
+       esquinas redondeadas solo arriba, hasta 65vh; nada flota. */
+    .ax-dock { position: fixed; inset: auto 0 0 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column-reverse; flex-wrap: nowrap; gap: 0; padding: 0; max-height: 65vh; overflow-y: auto; background: none; }
+    .ax-dock .ax-float, .ax-dock .ax-float.collapsed {
+      position: static; width: 100%; max-width: none; max-height: 65vh;
+      border-radius: 24px 24px 0 0; box-shadow: 0 -8px 24px rgba(0, 0, 0, .1);
+    }
+    .ax-handle { display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--faint); margin: 12px auto 0; flex: none; }
+    .ax-float-bar { cursor: pointer; padding: 10px 22px 0; }
+    .ax-dock .ax-grip { display: none; }
+    .ax-float-title { display: block; font-size: 13px; } /* siempre visible en móvil, plegada o no */
+    .ax-dock .ax-float-title { max-width: none; }
+    .ax-float-body { padding: 4px 22px 16px; gap: 14px; }
+    .ax-card-head { gap: 8px; }
+    .ax-pills { gap: 6px; }
+    .ax .ax-pill.sm { padding: 3px 8px; font-size: 9.5px; }
+
+    /* pestañas subrayadas, no segmentadas — como en la hoja de v5 */
+    /* especificidad igualada a la base (.ax-seg.soft / .ax .ax-seg button)
+       para que de verdad gane el estilo subrayado en vez del segmentado */
+    .ax-seg.soft.ax-tabs { background: none; padding: 0; gap: 20px; border-radius: 0; border-bottom: 1px solid var(--chip); }
+    .ax .ax-tabs button { padding: 0 0 10px; border-radius: 0; background: none; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 11.5px; border-bottom: 2px solid transparent; }
+    .ax .ax-tabs button.on { background: none; color: var(--ink); font-weight: 500; border-bottom-color: var(--accent); }
+    .ax .ax-tabs button:disabled { opacity: .4; }
+
+    /* Mesa en el teléfono: el panel del par sube como hoja desde abajo */
+    /* la barra en el teléfono: a la vista solo Modo y Vista; todo lo demás
+       vive en una hoja que sube al tocar «Herramientas», con los mismos
+       grupos y nombres en el mismo orden */
+    .mx-barra { gap: 8px; padding: 8px 16px 12px; }
+    .mx-ayuda, .ax .mx-pliegue, .ax .mx-ver .mx-resumen { display: none !important; }
+    .mx-hoja { display: none; flex-direction: column; gap: 14px; padding: 14px 12px; max-height: 56vh; overflow: auto; background: var(--bg); border: 1px solid var(--chip); border-radius: 16px; }
+    .mx-barra.abierta .mx-hoja { display: flex; }
+    .mx-hoja .mx-tira { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 14px; }
+    .mx-hoja .mx-ints { flex-wrap: wrap; }
+    .mx-hoja .mx-ver.plegada .mx-g:not(.mx-g--tam) { display: flex; }
+    .mx-hoja .mx-ver.plegada .mx-g--tam .mx-k { display: block; }
+    .mx-g { min-height: 0; }
+    .mx-orden { min-width: 0; }
+    .mx-donde { justify-content: space-between; gap: 8px; }
+    .mx-donde .mx-k { display: none; }
+    .mx-herr-seg { display: inline-flex; }
+    .mx-g--vista { order: 3; flex-basis: 100%; align-items: center; }
+    .ax .mx-int, .ax .mx-acc, .ax .mx-orden button { font-size: 11px; }
+    .mx-panel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 62vh; border-radius: 24px 24px 0 0; padding: 14px 22px 18px; z-index: 7; }
+    .mx-par img { height: 84px; }
+    .mx-galeria { top: 170px; gap: 20px; }
+    .mx-fig img { height: min(var(--gh, 220px), 44vw); max-width: calc(100vw - 48px); }
+    .mx-lb { padding: 16px; gap: 4px; }
+    .mx-lb img { max-width: calc(100vw - 32px); max-height: calc(100vh - 220px); }
+    .ax .mx-lb-nav { position: absolute; bottom: 20px; width: 44px; height: 44px; font-size: 26px; }
+    .ax .mx-lb-nav[data-lb='-1'] { left: 16px; }
+    .ax .mx-lb-nav[data-lb='1'] { right: 16px; }
+    .ax .mx-lb-x { top: 12px; right: 12px; }
+
+    /* frontmatter sobre fondo propio, como en la hoja de v5 */
+    .ax-fields { background: var(--chip); border-radius: 14px; padding: 12px 14px; margin: 0; row-gap: 12px; }
+  }
+
+  /* «Artefacto nuevo» (solo local): diálogo mínimo */
+  .mx-art { border: 1px solid var(--chip); border-radius: 16px; background: var(--bg); color: var(--ink); padding: 18px 20px; width: min(420px, calc(100vw - 32px)); }
+  .mx-art::backdrop { background: rgb(0 0 0 / .45); }
+  .mx-art form { display: flex; flex-direction: column; gap: 12px; }
+  .mx-art h3 { margin: 0; font-size: 13px; font-weight: 500; }
+  .mx-art label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; color: var(--muted); }
+  .mx-art input[type='text'], .mx-art select { font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--chip); background: var(--surface); color: var(--ink); }
+  .mx-art p { margin: 0; font-size: 11px; }
+  .mx-art-btns { display: flex; justify-content: flex-end; gap: 8px; }
+  .mx-art-btns button { padding: 8px 14px; border-radius: 999px; font-size: 11.5px; background: var(--chip); color: var(--ink); }
+  .mx-art-btns #mx-art-ok { background: var(--accent); color: #fff; }
+
+  /* «+» flotante de subir (imagen / artefacto) */
+  .ax-fab { position: fixed; right: 24px; bottom: 92px; z-index: 5; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+  .ax-fab[hidden], .ax-fab-menu[hidden] { display: none; }
+  .ax[data-view='mesa'] .ax-fab { bottom: calc(var(--mx-barra, 240px) + 16px); }
+  .ax .ax-fab-btn { width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 29px; font-weight: 300; line-height: 1; padding: 0 0 4px; box-shadow: 0 6px 20px rgb(0 0 0 / .35); transition: transform .15s; }
+  .ax .ax-fab-btn[aria-expanded='true'] { transform: rotate(45deg); }
+  .ax .ax-fab-btn:disabled { opacity: .6; }
+  .ax-fab-menu { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  .ax .ax-fab-menu button[hidden] { display: none; }
+  .ax .ax-fab-menu button { padding: 10px 18px; border-radius: 999px; background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 500; box-shadow: var(--shadow); }
+  .ax-fab-msg { position: absolute; right: 66px; bottom: 16px; max-width: 60vw; padding: 6px 12px; border-radius: 999px; background: var(--surface); color: var(--ink); font-size: 11px; white-space: nowrap; box-shadow: var(--shadow); }
+  .ax-fab-msg:empty { display: none; }
+  @media (max-width: 760px) { .ax-fab { right: 16px; bottom: 104px; } }
+
+  /* «Catalogar originales» (solo local): navegador de fuentes dentro del diálogo */
+  .mx-cat { width: min(560px, calc(100vw - 32px)); }
+  .mx-cat-in { display: flex; flex-direction: column; gap: 12px; }
+  .mx-cat-in h3 { margin: 0; font-size: 13px; font-weight: 500; }
+  .mx-cat-in label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; color: var(--muted); }
+  .mx-cat-in .mx-cat-chk { flex-direction: row; align-items: center; gap: 8px; }
+  .mx-cat-in select { font: inherit; font-size: 12px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--chip); background: var(--surface); color: var(--ink); }
+  .mx-cat-ruta { display: flex; flex-wrap: wrap; gap: 4px; font-size: 11px; color: var(--muted); }
+  .ax .mx-cat-ruta button { color: var(--ink); text-decoration: underline; padding: 0 2px; font-size: 11px; }
+  .mx-cat-lista { max-height: 38vh; overflow: auto; display: flex; flex-direction: column; border: 1px solid var(--chip); border-radius: 10px; }
+  .ax .mx-cat-lista button, .mx-cat-lista label { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 8px 12px; font-size: 11.5px; color: var(--ink); text-align: left; border-bottom: 1px solid var(--chip); }
+  .mx-cat-lista label span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mx-cat-lista label i { font-style: normal; font-size: 10px; color: var(--muted); }
+  .mx-cat-lista .vacio { padding: 12px; font-size: 11.5px; color: var(--muted); }
+  .mx-art-btns #mx-cat-sel { background: var(--accent); color: #fff; }
+  .mx-cat-fuente { display: flex; align-items: flex-end; gap: 10px; }
+  .mx-cat-fuente label { flex: 1; min-width: 0; }
+  .ax .mx-cat-fuente button { padding: 8px 14px; border-radius: 999px; font-size: 11.5px; background: var(--chip); color: var(--ink); white-space: nowrap; }
+  .mx-fn-fila { display: flex; gap: 8px; }
+  .mx-fn-fila input { flex: 1; min-width: 0; }
+  .ax .mx-fn-fila button { padding: 8px 14px; border-radius: 999px; font-size: 11.5px; background: var(--chip); color: var(--ink); }
+  .mx-cat-in input[type='text'] { font: inherit; font-size: 12px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--chip); background: var(--surface); color: var(--ink); }
+  .mx-cat-in[hidden], #mx-fn[hidden], #mx-fn-nc[hidden] { display: none; }
+  .ax .mx-cat-lista button.usar { background: var(--surface); font-weight: 500; }
+  .mx-art-btns #mx-fn-ok { background: var(--accent); color: #fff; }
+
+  /* Conversar (chat.js) — panel a la derecha, encima de las tarjetas; solo en local */
+  .ax-conversar[hidden], .ax-chat[hidden], .ax-ajustes[hidden] { display: none; }
+  .ax .ax-chat-mini.on { color: var(--accent); }
+  .ax-chat { position: fixed; right: 24px; top: 84px; bottom: 24px; width: min(440px, calc(100vw - 32px)); z-index: 5; display: flex; flex-direction: column; gap: 8px; padding: 10px 14px 12px; box-sizing: border-box; background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); resize: both; overflow: hidden; min-width: 320px; min-height: 320px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
+  .ax-chat-bar { display: flex; align-items: center; gap: 8px; margin: -10px -14px 0; padding: 10px 14px 4px; cursor: grab; touch-action: none; user-select: none; }
+  .ax-chat-bar:active { cursor: grabbing; }
+  .ax-chat-bar .ax-grip { color: var(--muted); letter-spacing: -2px; font-size: 11px; }
+  .ax-chat .ax-entrada-title { font-size: 11px; font-weight: 500; letter-spacing: 1.6px; }
+  .ax-chat .ax-kicker { font-size: 10px; font-weight: 500; letter-spacing: .8px; }
+  .ax .ax-chat .ax-fold { width: 22px; height: 22px; font-size: 13px; font-weight: 500; }
+  .ax .ax-chat .ax-pill.sm { font-size: 11px; font-weight: 500; padding: 2px 8px; }
+  .ax-chat-bar select { max-width: 170px; min-width: 0; font: inherit; font-size: 11px; color: var(--ink); background: var(--chip); border: 0; border-radius: 999px; padding: 4px 8px; }
+  .ax .ax-chat-mini { font-size: 11px; font-weight: 500; letter-spacing: .3px; color: var(--muted); padding: 2px 7px; border-radius: 999px; background: var(--chip); white-space: nowrap; }
+  .ax .ax-chat-mini:hover { color: var(--ink); }
+  .ax-chat-sobre { display: flex; flex-direction: column; gap: 4px; padding-bottom: 6px; border-bottom: 1px solid var(--chip); }
+  .ax-chat-sobre .ax-pills { gap: 4px; max-height: 80px; overflow: auto; font-size: 11px; }
+  .ax-chat-sobre > .ax-chat-mini { align-self: flex-start; }
+  .ax .ax-chat-ref { gap: 4px; padding: 2px 3px 2px 8px; font-size: 11px; font-weight: 500; }
+  .ax .ax-chat-ref[data-kind='activo'] { background: var(--accent-soft); color: var(--accent); }
+  .ax-chat-ref img { width: 16px; height: 16px; object-fit: cover; border-radius: 4px; margin-left: -6px; }
+  .ax .ax-chat-ref [data-chat-quitar] { color: var(--muted); padding: 0 4px; }
+  .ax-chat-aviso { margin: 0; font-size: 11px; color: var(--muted); }
+  .ax-chat-aviso.error { color: var(--accent); }
+  .ax-chat-log { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.4; padding-right: 4px; }
+  .ax-chat-vacio { margin: auto 0; color: var(--ink); }
+  /* expandida (⤢): más aire y letra un punto mayor para leer largo */
+  .ax-chat.grande { resize: none; }
+  .ax-chat.grande .ax-chat-bar { cursor: default; }
+  .ax-chat.grande .ax-chat-log { font-size: 14.5px; line-height: 1.5; padding: 0 max(0px, calc((100% - 760px) / 2)); }
+  .ax-chat.grande .ax-chat-form, .ax-chat.grande .ax-chat-sobre { padding-left: max(0px, calc((100% - 760px) / 2)); padding-right: max(0px, calc((100% - 760px) / 2)); }
+  .ax-chat.grande .ax-chat-form textarea { font-size: 14.5px; }
+  /* el campo de escribir crece al entrar */
+  .ax-chat-form textarea:focus { min-height: 84px; }
+  .ax .ax-chat-ref.nuevo { animation: ax-destello 1.2s ease-out; }
+  @keyframes ax-destello { 0% { box-shadow: 0 0 0 0 var(--accent); } 30% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 45%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+  .ax-chat-lista { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 4px; }
+  .ax-chat-lista[hidden], .ax-chat-log[hidden] { display: none; }
+  .ax-chat-lista code { font: 10.5px 'Roboto Mono', ui-monospace, monospace; background: var(--chip); padding: 0 4px; border-radius: 4px; }
+  .ax-chat-item { display: flex; align-items: center; gap: 8px; padding: 2px 6px 2px 0; border-radius: 10px; }
+  .ax-chat-item:hover, .ax-chat-item.on { background: var(--chip); }
+  .ax .ax-chat-item-abrir { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 6px 10px; font-size: 13px; }
+  .ax-chat-item-acc { display: flex; gap: 8px; opacity: .55; }
+  .ax-chat-item:hover .ax-chat-item-acc, .ax-chat-item.on .ax-chat-item-acc { opacity: 1; }
+  .ax .ax-chat-item-acc button, .ax .ax-chat-archivo button { font-size: 11px; color: var(--muted); padding: 0; }
+  .ax .ax-chat-item-acc button:hover, .ax .ax-chat-archivo button:hover { color: var(--accent); }
+  .ax-chat-archivo { margin: -2px 0 0; display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); min-width: 0; }
+  .ax-chat-archivo[hidden] { display: none; }
+  .ax-chat-archivo code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 10.5px 'Roboto Mono', ui-monospace, monospace; }
+  .ax-chat-item b { font-weight: 500; }
+  .ax-chat-item small { color: var(--muted); font-size: 11px; }
+  .ax-chat-msg p, .ax-chat-msg ul, .ax-chat-msg ol { margin: 0 0 6px; }
+  .ax-chat-msg .ax-muted { font-size: 11px; }
+  .ax-chat-msg ul, .ax-chat-msg ol { padding-left: 16px; }
+  .ax-chat-msg h4 { margin: 8px 0 2px; font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; }
+  .ax-chat-msg pre { white-space: pre-wrap; font: 11px 'Roboto Mono', monospace; background: var(--chip); padding: 6px 8px; border-radius: 8px; }
+  .ax-chat-msg code { font: 11px 'Roboto Mono', monospace; background: var(--chip); padding: 0 4px; border-radius: 4px; }
+  .ax-chat-msg.yo { align-self: flex-end; max-width: 85%; background: var(--chip); padding: 6px 10px 0; border-radius: 12px 12px 3px 12px; }
+  .ax .ax-chat-link { color: var(--accent); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; padding: 0; }
+  .ax-chat-think, .ax-chat-fuentes { font-size: 11px; color: var(--muted); margin: 0 0 8px; }
+  .ax-chat-think summary, .ax-chat-fuentes summary { cursor: pointer; letter-spacing: .4px; }
+  .ax-chat-think[open] { border-left: 2px solid var(--chip); padding-left: 10px; }
+  .ax-chat-fuentes .ax-pills { gap: 4px; margin-top: 6px; }
+  .ax-chat-fotos { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+  .ax-chat-fotos img { width: 52px; height: 52px; object-fit: cover; border-radius: 8px; display: block; }
+  .ax-chat-err { color: var(--accent); }
+  .ax-chat-acc button { font-size: 11px; color: var(--muted); padding: 0; }
+  .ax-chat-form { position: relative; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--chip); padding-top: 10px; }
+  .ax-chat-form textarea { font: inherit; font-size: 13px; color: var(--ink); background: var(--bg); border: 0; border-radius: 12px; padding: 8px 10px; resize: none; box-sizing: border-box; width: 100%; }
+  .ax-chat-form textarea:focus { outline: 2px solid var(--accent); }
+  .ax-chat-pie { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); }
+  .ax-chat-pie label { display: flex; align-items: center; gap: 4px; }
+  .ax-chat-pie select { font: inherit; color: var(--ink); background: var(--chip); border: 0; border-radius: 999px; padding: 2px 6px; }
+  .ax .ax-chat-env { margin-left: auto; background: var(--ink); color: var(--surface); font-weight: 500; font-size: 11px; letter-spacing: .8px; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; }
+  .ax-chat-voz { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 11px; color: var(--muted); }
+  .ax-chat-voz[hidden] { display: none; }
+  .ax-chat-voz label { display: flex; align-items: center; gap: 4px; }
+  .ax-chat-voz select { max-width: 150px; font: inherit; color: var(--ink); background: var(--chip); border: 0; border-radius: 999px; padding: 2px 6px; }
+  .ax-chat-voz input[type='range'] { width: 64px; accent-color: var(--accent); }
+  .ax .ax-chat-acc { display: flex; gap: 10px; }
+  .ax-chat-sug { position: absolute; left: 0; right: 0; bottom: 100%; margin-bottom: 6px; display: flex; flex-direction: column; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); padding: 6px; max-height: 280px; overflow: auto; }
+  .ax-chat-sug[hidden] { display: none; }
+  .ax .ax-chat-sug button { display: flex; align-items: center; gap: 6px; text-align: left; padding: 4px 6px; border-radius: 6px; font-size: 12px; }
+  .ax .ax-chat-sug button.on { background: var(--chip); }
+  .ax-chat-sug img { width: 22px; height: 22px; object-fit: cover; border-radius: 4px; }
+  .ax-chat-sug span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ax-chat-sug small { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .6px; }
+  @media (max-width: 640px) {
+    .ax-chat { left: 0; right: 0; top: 56px; bottom: 0; width: auto; min-width: 0; border-radius: 22px 22px 0 0; z-index: 22; resize: none; }
+    .ax-chat-bar { cursor: default; }
+    .ax-chat-bar .ax-grip { display: none; }
+  }
+
+  /* Ajustes (ajustes.js) — un diálogo con todo lo que se puede cambiar, y al lado cómo está en el disco */
+  .ax-aj { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0; border: 0; border-radius: 22px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+  .ax-aj::backdrop { background: color-mix(in srgb, var(--bg) 80%, transparent); }
+  .ax-aj-in { display: flex; flex-direction: column; gap: 10px; padding: 18px 22px 16px; max-height: calc(100vh - 48px); box-sizing: border-box; }
+  .ax-aj h3 { margin: 0; font-size: 12px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; }
+  .ax-aj h3 span { color: var(--accent); }
+  .ax-aj-cuerpo { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 18px; padding-right: 6px; font-size: 12px; }
+  .ax-aj section { display: flex; flex-direction: column; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--chip); }
+  .ax-aj h4 { margin: 0; font-size: 10px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .ax-aj h4 small { display: block; margin-top: 2px; text-transform: none; letter-spacing: 0; font-size: 11px; }
+  .ax-aj label { display: flex; flex-direction: column; gap: 3px; }
+  .ax-aj-mas { display: flex; flex-direction: column; gap: 8px; }
+  .ax-aj-mas summary { cursor: pointer; list-style: none; }
+  .ax-aj-mas summary::-webkit-details-marker { display: none; }
+  .ax-aj-mas summary h4::before { content: '▸ '; }
+  .ax-aj-mas[open] summary h4::before { content: '▾ '; }
+  .ax-aj label small, .ax-aj-fila small { color: var(--muted); font-size: 10.5px; }
+  .ax-aj input[type='text'], .ax-aj textarea { font: inherit; font-size: 12px; color: var(--ink); background: var(--bg); border: 1px solid var(--chip); border-radius: 8px; padding: 6px 8px; box-sizing: border-box; width: 100%; }
+  .ax-aj textarea { resize: vertical; line-height: 1.4; }
+  .ax-aj input:focus, .ax-aj textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .ax-aj code { font: 10.5px 'Roboto Mono', ui-monospace, monospace; background: var(--chip); padding: 0 4px; border-radius: 4px; overflow-wrap: anywhere; }
+  .ax-aj-tabla { display: flex; flex-direction: column; gap: 6px; }
+  .ax .ax-aj-fila { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 96px; gap: 10px; align-items: center; }
+  .ax-aj-fila > span:first-child { display: flex; flex-direction: column; gap: 1px; }
+  .ax-aj-fila b { font-weight: 500; }
+  .ax-aj-estado { margin: 0; font-size: 11px; color: var(--muted); }
+  .ax-aj-si { color: var(--ink); }
+  .ax-aj-no { color: var(--accent); }
+  .ax .ax-aj-chk { flex-direction: row; align-items: center; gap: 6px; }
+  .ax-aj-msg { margin: 0; min-height: 1.2em; font-size: 11px; color: var(--muted); }
+  .ax-aj-msg.error { color: var(--accent); }
+  .ax-aj .mx-art-btns #ax-aj-ok { background: var(--accent); color: #fff; }
+  @media (max-width: 640px) {
+    .ax .ax-aj-fila { grid-template-columns: 1fr; gap: 4px; }
+  }

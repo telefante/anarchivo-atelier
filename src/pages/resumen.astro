@@ -1,0 +1,55 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../data/index.json';
+import { cargar } from '../../scripts/config.mjs';
+
+const abiertas = data.convocatorias.filter((c) => !['enviada', 'resultado'].includes(c.estado));
+const conFecha = abiertas.filter((c) => c.deadline).sort((a, b) => a.deadline.localeCompare(b.deadline));
+const proximo = conFecha[0]?.deadline;
+const fmt = (d: string) => (d ? d.split('-').reverse().join('.') : '—');
+const corto = proximo
+  ? new Date(proximo).toLocaleDateString('es', { day: '2-digit', month: 'short' }).replace('.', '').toUpperCase()
+  : '—';
+const ultimoEnsayo = data.ensayos[0];
+---
+<Base title="Resumen" sub={`${cargar().nombre} — panorama de lectura`} active="resumen">
+  <div class="grid4">
+    <div class="card stat"><b>{data.encurso.length}</b><span class="label">Proyectos en curso</span></div>
+    <div class="card stat"><b>{abiertas.length}</b><span class="label">Convocatorias abiertas</span></div>
+    <div class="card stat hot"><b>{corto}</b><span class="label">Próximo plazo</span></div>
+    <div class="card stat"><b>{data.ensayos.length}</b><span class="label">Ensayos</span></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <span class="label ink">Bitácora — últimas entradas</span>
+      <hr class="hr" />
+      {data.bitacora.slice(0, 3).map((e) => (
+        <div><div class="date">{e.date}</div><div>{e.title || e.body}</div></div>
+      ))}
+      {data.bitacora.length === 0 && <p class="empty">Sin entradas.</p>}
+    </div>
+    <div class="card">
+      <span class="label ink">Convocatorias — plazos</span>
+      <hr class="hr" />
+      {data.convocatorias.slice(0, 6).map((c) => (
+        <div class="row">
+          <strong>{c.title}</strong>
+          <span class="row">
+            <span class={`chip ${c.slug === conFecha[0]?.slug ? 'hot' : ''}`}>{c.estado}</span>
+            <span class={c.slug === conFecha[0]?.slug ? 'hot-text' : 'date'}>{fmt(c.deadline)}</span>
+          </span>
+        </div>
+      ))}
+      {data.convocatorias.length === 0 && <p class="empty">Sin convocatorias.</p>}
+    </div>
+  </div>
+
+  {ultimoEnsayo && (
+    <div class="card">
+      <span class="label">Último ensayo</span>
+      <h3 style="font-size:24px">{ultimoEnsayo.title}</h3>
+      <p style="margin:0;color:var(--muted)">{ultimoEnsayo.excerpt}</p>
+    </div>
+  )}
+</Base>

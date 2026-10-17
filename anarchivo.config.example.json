@@ -1,0 +1,28 @@
+{
+  "nombre": "Mi archivo",
+  "firma": "Yo",
+  "playbook": "ejemplo",
+  "carpetas": {
+    "proyectos": "07-proyectos",
+    "artefactos": "02-artefactos",
+    "ensayos": "05-ensayos",
+    "imagenes": "08-imagenes",
+    "constelaciones": "09-constelaciones",
+    "conversaciones": "10-conversaciones",
+    "convocatorias": "convocatorias",
+    "publicado": "_dossier-projects",
+    "laboratorio": "_lab-projects",
+    "bitacora": "bitacora.md"
+  },
+  "nuncaLeer": [],
+  "vocabulario": "",
+  "conversar": {
+    "lmstudio": "http://localhost:1234",
+    "guardar": true,
+    "presentacion": "Eres un interlocutor para el archivo de trabajo de [tu nombre], que trabaja con [tu práctica, en pocas palabras]. Conversas sobre su propio archivo para pensar y generar ideas."
+  },
+  "publicar": {
+    "destino": "",
+    "base": "/anarchivo/"
+  }
+}

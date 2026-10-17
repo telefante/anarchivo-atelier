@@ -1,0 +1,356 @@
+---
+// v4 · Búsqueda y grafo (Figma «Atelier Negrón — Dashboard (Entwurf)», página v4).
+// La entrada es un buscador; todo lo demás queda detrás. Un concepto o un
+// proyecto filtra el grafo (7 → 8), un nodo abre su tarjeta (9).
+// Solo lectura: «Edición» queda como decisión abierta (ver v3 en Figma).
+import '../styles/global.css';
+import '../styles/anarchivo.css';
+import data from '../data/index.json';
+import { cargar } from '../../scripts/config.mjs';
+
+const grafo = (data as any).grafo ?? { concepts: [], nodes: [], links: [] };
+const base = import.meta.env.BASE_URL; // '/' en dev, la subcarpeta de Publicar en el build de deploy
+// local = solo el servidor de desarrollo (los endpoints que escriben al disco). Un deploy lanzado desde su boton
+// Publicar hereda NODE_ENV=development, asi que DEV no basta: el build de deploy lleva ATELIER_BASE.
+const local = import.meta.env.DEV && !process.env.ATELIER_BASE;
+// el nombre del archivo y de sus carpetas: «Ajustes» (dashboard/anarchivo.config.json)
+const atelier = cargar();
+---
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <!-- sin zoom de página: en el teléfono un pellizco (o el auto-zoom al enfocar un campo) sacaba los controles de la pantalla -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <!-- «Añadir a pantalla de inicio»: abre a pantalla completa, sin las barras de Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Anarchivo" />
+  <title>Anarchivo — {atelier.nombre}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&family=Roboto+Mono&display=swap" rel="stylesheet" />
+</head>
+<body class="ax" data-state="inicio" data-mode="anarchivo" data-view="grafo">
+  <svg id="ax-graph" aria-label="Grafo de conceptos, proyectos y entradas"></svg>
+  <div class="ax-veil" aria-hidden="true"></div>
+
+  <!-- '/' redirige aquí mismo — el logo no debe apuntar en círculo. Lleva
+       al dashboard clásico (con la barra lateral: Bitácora, Ensayos…),
+       igual que «Archivo» en el switch de la derecha. -->
+  <a class="ax-word" href={`${base}resumen`} title="Dashboard — Bitácora, Ensayos, Ediciones…">{atelier.nombre.toLocaleUpperCase('es')}</a>
+
+  <div class="ax-modes">
+    <!-- solo en local: lanza scripts/deploy.sh (sync + build + subida a la versión online) -->
+    <div class="ax-seg ax-publicar" id="ax-publicar" hidden>
+      <button type="button" id="ax-deploy" title="Sincronizar y publicar la versión online (scripts/deploy.sh)">Publicar ↑</button>
+    </div>
+    <!-- solo en local: conversar con un modelo de LM Studio sobre el archivo (scripts/chat.mjs) -->
+    <div class="ax-seg ax-conversar" id="ax-conversar" hidden>
+      <button type="button" id="ax-chat-btn" title="Conversar con un modelo local (LM Studio) sobre proyectos, fotos y textos del archivo">Conversar</button>
+    </div>
+    <!-- solo en local: nombre del archivo, carpetas, vocabulario, Conversar, publicar (ajustes.js) -->
+    <div class="ax-seg ax-ajustes" id="ax-ajustes" hidden>
+      <button type="button" id="ax-ajustes-btn" title="Ajustes: cómo se llama el archivo y sus carpetas, qué no se lee, vocabulario, Conversar, publicar">Ajustes</button>
+    </div>
+    <div class="ax-seg" role="group" aria-label="Lectura o edición">
+      <button type="button" class="on">Lectura</button>
+      <button type="button" disabled title="Decisión abierta: el dashboard todavía no escribe en los archivos">Edición</button>
+    </div>
+    <!-- Archivo = el dashboard clásico (/resumen); Anarchivo = esta página.
+         El mismo switch está en Base.astro para volver. -->
+    <nav class="ax-seg" aria-label="Archivo o anarchivo">
+      <a href={`${base}resumen`} title="Dashboard — Bitácora, Ensayos, Ediciones…">Archivo</a>
+      <a href={`${base}anarchivo`} class="on accent" aria-current="page">Anarchivo</a>
+    </nav>
+  </div>
+
+  <!-- 7 · Inicio -->
+  <section class="ax-entrada" id="ax-entrada" aria-label="Buscar">
+    <div class="ax-entrada-bar" title="Arrastrar · doble clic para plegar">
+      <span class="ax-grip" aria-hidden="true">⋮⋮</span>
+      <span class="ax-entrada-title">ANARCHIVO <span>—</span></span>
+      <button type="button" class="ax-fold" id="ax-fold" aria-expanded="true" aria-label="Plegar el buscador">–</button>
+    </div>
+    <div class="ax-entrada-body">
+      <label class="ax-search ax-search--big">
+        <img src={`${base}icons/lupa.svg`} width="20" height="20" alt="" />
+        <input id="ax-q-big" type="search" autocomplete="off" placeholder="Buscar un concepto, un proyecto, una entrada…" />
+      </label>
+      <div class="ax-sugerencias">
+        <span class="ax-kicker">Empieza por un concepto</span>
+        <div class="ax-pills" id="ax-sug"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 / 9 · buscador compacto, filtros y ruta -->
+  <section class="ax-top">
+    <label class="ax-search ax-search--top">
+      <img src={`${base}icons/lupa.svg`} width="24" height="24" alt="" />
+      <span class="ax-pill ink sm" id="ax-qtype" hidden></span>
+      <input id="ax-q" type="search" autocomplete="off" placeholder="Buscar…" />
+      <button type="button" class="ax-fold" id="ax-fold-top" aria-expanded="true" aria-label="Plegar el buscador">–</button>
+    </label>
+    <div class="ax-row" id="ax-ruta"></div>
+  </section>
+
+  <!-- lo abierto vive siempre en algún lado: como mucho 2 tarjetas grandes
+       flotan en ax-windows; el resto queda como ficha compacta en ax-dock,
+       un toque para volver a abrirla, sin perder el sitio. -->
+  <div class="ax-windows" id="ax-windows" aria-live="polite"></div>
+  <div class="ax-dock" id="ax-dock" aria-label="Abiertos"></div>
+
+  <div class="ax-seg ax-detail" role="group" aria-label="Nivel de detalle del grafo" title="También con la rueda: acercar suma detalle, alejar lo quita">
+    <button type="button" data-detail="0" class="on">Figura</button>
+    <button type="button" data-detail="1">Obra</button>
+    <button type="button" data-detail="2">Todo</button>
+  </div>
+
+  <section class="ax-lista" id="ax-lista"></section>
+  <section class="ax-carpetas" id="ax-carpetas"></section>
+  <section class="ax-constelas" id="ax-constelas"></section>
+
+  <!-- Mesa · imágenes sueltas sobre una mesa de luz: se arrastran, se
+       agrandan, se relacionan tirando un hilo de una a otra. La semejanza
+       (color + composición) se calcula en el navegador; la cercanía es la
+       que el usuario arma. Nada se escribe en imagenes.yaml: posiciones,
+       relaciones y notas viven en este navegador hasta exportarlas. -->
+  <section class="ax-mesa" id="ax-mesa" data-base={base} data-local={local ? '1' : undefined} data-publicar={atelier.publicar.destino || process.env.REMOTE_BASE ? '1' : undefined} data-ingest={import.meta.env.PUBLIC_INGEST_URL || undefined} data-sueltas={atelier.carpetas.imagenes} data-proyectos={atelier.carpetas.proyectos} data-publicado={atelier.carpetas.publicado} data-boveda={atelier.raiz.split(/[\\/]/).pop()}>
+    <div class="mx-stage" id="mx-stage">
+      <svg class="mx-lines" id="mx-lines" aria-hidden="true"></svg>
+      <svg class="mx-dots" id="mx-dots"></svg>
+    </div>
+    <p class="mx-vacio" id="mx-hint" hidden>La mesa está vacía. Busca algo y pulsa Enter para ponerlo aquí, o trae <b>Últimas tocadas</b> abajo. Lo que pongas se queda: cada búsqueda es una capa.</p>
+    <p class="mx-vacio" id="mx-vacio" hidden>Todavía no hay imágenes catalogadas. Un proyecto entra en la mesa cuando tiene <code>imagenes/imagenes.yaml</code>.</p>
+  </section>
+  <section class="mx-galeria" id="mx-galeria" aria-label="Galería: todas las imágenes"></section>
+  <div class="mx-lb" id="mx-lb" hidden role="dialog" aria-label="Imagen"></div>
+  <div class="mx-constel-modal" id="mx-constel-modal" hidden role="dialog" aria-label="Crear constelación">
+    <div class="mx-constel-inner">
+      <h2>Nueva constelación</h2>
+      <p id="mx-constel-count"></p>
+      <label>Guardar en <select id="mx-constel-dest"></select></label>
+      <label>Nombre <input type="text" id="mx-constel-nombre" placeholder="ej. Prototipos de live cinema" /></label>
+      <label>Descripción <textarea id="mx-constel-desc" placeholder="Notas sobre qué une estas imágenes..."></textarea></label>
+      <label>Enlazar textos, proyectos o conceptos <input type="search" id="mx-constel-q" autocomplete="off" placeholder="Buscar un ensayo, una entrada de bitácora, un proyecto…" /></label>
+      <div class="ax-pills" id="mx-constel-hits"></div>
+      <div class="ax-pills" id="mx-constel-links"></div>
+      <p id="mx-constel-aviso" aria-live="polite"></p>
+      <div class="mx-constel-btns">
+        <button type="button" id="mx-constel-ok">Crear</button>
+        <button type="button" id="mx-constel-cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <!-- Barra inferior. Fuera de la Mesa solo se ve «Vista»; en la Mesa cada
+       decisión tiene un sitio fijo y una forma que dice qué es (Figma v6):
+       pista = uno entre varios · punto = interruptor · signo = acción.
+       Lo que no aplica en un modo se atenúa en su sitio (data-solo), no se
+       quita: así nada salta. Arriba lo que se ve, abajo qué hago y dónde estoy. -->
+  <div class="mx-barra" id="mx-barra">
+    <p class="ax-muted mx-ayuda">arrastrar · ◦ tirar un hilo · +N trae sus vecinas, − las devuelve · × quita · clic elige, shift+clic compara · doble clic: foco en esa foto y sus conexiones (Esc sale) · rueda: mover · pellizco o ⌘+rueda: zoom</p>
+    <div class="mx-hoja" id="mx-hoja">
+      <div class="mx-tira mx-ver" id="mx-ver">
+        <button type="button" class="mx-resumen" id="mx-resumen" title="Desplegar lo que se ve"><span class="mx-k">Ver</span><span id="mx-resumen-txt"></span></button>
+        <div class="mx-g" data-solo="mesa">
+          <span class="mx-k">Relaciones a la vista</span>
+          <div class="ax-seg" role="group" aria-label="Relaciones a la vista">
+            <button type="button" data-mx-rel="off" title="Solo las imágenes, sin hilos">Sin relaciones</button>
+            <button type="button" data-mx-rel="sel" title="Las relaciones de lo elegido, lo que tocas o lo expandido (+)">De la selección</button>
+            <button type="button" data-mx-rel="todas" title="Todas las relaciones entre lo que hay sobre la mesa">Todas</button>
+          </div>
+        </div>
+        <div class="mx-g" data-solo="mesa">
+          <span class="mx-k">Líneas</span>
+          <div class="mx-ints" role="group" aria-label="Líneas a la vista">
+            <button type="button" class="mx-int" data-mx-lcapa="rel"><i class="k hilo"></i>hilo tuyo</button>
+            <button type="button" class="mx-int" data-mx-lcapa="yaml" title="Declaradas en imagenes.yaml"><i class="k yaml"></i>relacionadas</button>
+            <button type="button" class="mx-int" data-mx-lcapa="visual" title="Parecido calculado (CV)"><i class="k visual"></i>relación visual</button>
+            <button type="button" class="mx-int" data-mx-lcapa="cerca"><i class="k cerca"></i>cercanía</button>
+            <button type="button" class="mx-int" data-mx-lcapa="hilos" title="Hilos hacia las dos imágenes más parecidas"><i class="k semejanza"></i>hilos de semejanza</button>
+          </div>
+        </div>
+        <div class="mx-g" data-solo="mesa">
+          <span class="mx-k">Capas</span>
+          <div class="mx-ints">
+            <button type="button" class="mx-int" data-mx-capa="contagio" title="Cada imagen toma el color de las que tiene cerca">Contagio</button>
+          </div>
+        </div>
+        <div class="mx-g mx-g--tam" data-solo="galeria">
+          <span class="mx-k">Tamaño</span>
+          <label class="mx-tam" title="Tamaño de las imágenes alineadas"><input type="range" id="mx-tam" min="120" max="420" step="10" /></label>
+        </div>
+        <button type="button" class="mx-pliegue" id="mx-pliegue" aria-expanded="true" aria-label="Plegar lo que se ve">–</button>
+      </div>
+      <div class="mx-tira mx-hacer">
+        <div class="mx-g mx-g--orden">
+          <span class="mx-k">Ordenar</span>
+          <div class="mx-orden" role="group" aria-label="Ordenar">
+            <button type="button" data-mx-orden="semejanza" title="Acercar lo que se parece, alejar lo que no"><i class="mx-s">↻</i>Por semejanza</button>
+            <button type="button" data-mx-orden="proyecto" title="Una fila por proyecto"><i class="mx-s">↻</i>Por proyecto</button>
+          </div>
+        </div>
+        <div class="mx-g" data-solo="mesa">
+          <span class="mx-k">Traer</span>
+          <div class="mx-ints">
+            <button type="button" class="mx-acc" id="mx-recientes" title="Poner sobre la mesa las últimas imágenes que tocaste"><i class="mx-s">+</i>Últimas tocadas</button>
+            <button type="button" class="mx-acc" id="mx-constels" title="Volver a una constelación guardada: pone sus imágenes sobre la mesa"><i class="mx-s">✦</i><span>Constelaciones</span></button>
+            <button type="button" class="mx-int" id="mx-dossier" title="Mostrar/ocultar imágenes publicadas (dossier)">Dossier</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-tira mx-donde">
+      <div class="mx-g mx-g--vista">
+        <span class="mx-k">Vista</span>
+        <div class="ax-seg ax-views" role="group" aria-label="Vista">
+          <button type="button" data-view="grafo" class="on">Grafo</button>
+          <button type="button" data-view="lista">Lista</button>
+          <button type="button" disabled title="Próxima etapa">Tiempo</button>
+          <button type="button" data-view="carpetas">Carpetas</button>
+          <button type="button" data-view="constelaciones" title="Las constelaciones guardadas, cada una con sus imágenes y textos">Constelaciones</button>
+          <button type="button" data-view="mesa">Mesa</button>
+        </div>
+      </div>
+      <div class="mx-g">
+        <span class="mx-k">Modo</span>
+        <div class="ax-seg" role="group" aria-label="Libre o alineado">
+          <button type="button" data-mx-modo="mesa" title="Imágenes sueltas, para moverlas y relacionarlas">Libre</button>
+          <button type="button" data-mx-modo="galeria" title="Todas las imágenes a la vista, en filas">Alineado</button>
+        </div>
+      </div>
+      <div class="mx-g mx-g--fin" data-solo="mesa">
+        <span class="mx-k">Selección</span>
+        <div class="mx-ints">
+          <button type="button" class="mx-int" id="mx-elegir" aria-pressed="false" title="Tocar imágenes para elegirlas (sin ⌘/Ctrl). Mientras está activo, las imágenes no se arrastran">Elegir</button>
+          <button type="button" class="mx-acc" id="mx-constelacion" title="Dar nombre a lo elegido (⌘/Ctrl+clic, o con «Elegir»), o sumarlo a una constelación que ya existe"><i class="mx-s">+</i>Constelación</button>
+          <b class="mx-cuenta" id="mx-constel-n" aria-label="Imágenes elegidas">0</b>
+        </div>
+      </div>
+      <div class="mx-g mx-g--salida">
+        <span class="mx-k">Salida</span>
+        <button type="button" class="mx-acc" id="mx-export" title="Relaciones y notas en markdown, para llevar a la bitácora"><i class="mx-s">→</i>Exportar</button>
+      </div>
+      <div class="ax-seg mx-herr-seg"><button type="button" id="mx-herr" aria-expanded="false" aria-controls="mx-hoja">Herramientas +</button></div>
+    </div>
+  </div>
+  <!-- «+» flotante: subir una imagen o crear un artefacto desde cualquier vista (solo si hay a dónde subir: local o PUBLIC_INGEST_URL) -->
+  <div class="ax-fab" id="ax-fab" hidden>
+    <div class="ax-fab-menu" id="ax-fab-menu" hidden>
+      <button type="button" id="mx-cat" hidden title="Dejar en el playbook la vista previa y la ficha de un original grande (20–200 MB) que vive en otra carpeta; el original no se copia">Catalogar original</button>
+      <button type="button" id="mx-subir" title="Añadir imágenes nuevas: se reducen a 2000 px y pasan a png">Imagen</button>
+      <button type="button" id="mx-art" title="Crear un artefacto nuevo (libro, gráfica, original, foto, video, código) con sus fotos">Artefacto</button>
+    </div>
+    <span class="ax-fab-msg" id="ax-fab-msg" role="status" aria-live="polite"></span>
+    <button type="button" class="ax-fab-btn" id="ax-fab-btn" aria-label="Añadir imagen o artefacto" aria-expanded="false">+</button>
+    <input type="file" id="mx-subir-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden />
+    <input type="file" id="mx-proy-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden />
+  </div>
+  <dialog class="mx-art mx-cat" id="mx-cat-dlg">
+    <div class="mx-cat-in">
+      <h3>Catalogar originales</h3>
+      <p class="ax-muted">Solo se guarda la vista previa y un enlace; el original se queda donde está.</p>
+      <div class="mx-cat-fuente"><label>Fuente <select id="mx-cat-fuente"></select></label><button type="button" id="mx-cat-nueva-btn">+ Fuente</button></div>
+
+      <div id="mx-cat-main" class="mx-cat-in">
+        <div class="mx-cat-ruta" id="mx-cat-ruta"></div>
+        <div class="mx-cat-lista" id="mx-cat-lista"></div>
+        <label>Va a <select id="mx-cat-proy"></select></label>
+        <label class="mx-cat-chk"><input type="checkbox" id="mx-cat-rec" /> al catalogar la carpeta, incluir sus subcarpetas</label>
+        <p class="ax-muted" id="mx-cat-msg" role="status"></p>
+        <div class="mx-art-btns"><button type="button" id="mx-cat-cancel">Cerrar</button><button type="button" id="mx-cat-carp">Catalogar esta carpeta</button><button type="button" id="mx-cat-sel">Catalogar los elegidos</button></div>
+      </div>
+
+      <div id="mx-fn" class="mx-cat-in" hidden>
+        <h3>Fuente nueva</h3>
+        <p class="ax-muted">Una carpeta donde ya tienes originales. No se copia nada: solo se podrá catalogar lo que esté dentro.</p>
+        <label>Carpeta en este Mac
+          <div class="mx-fn-fila"><input type="text" id="mx-fn-ruta" readonly placeholder="Elige una carpeta…" /><button type="button" id="mx-fn-elegir">Elegir…</button></div>
+        </label>
+        <div class="mx-cat-lista" id="mx-fn-nav" hidden></div>
+        <label>Nombre <input type="text" id="mx-fn-nombre" placeholder="ej. Disco de originales" /></label>
+        <label>Tipo
+          <select id="mx-fn-tipo"><option value="disco">Disco o carpeta del Mac</option><option value="nextcloud">Nextcloud</option><option value="icloud">iCloud Drive</option></select>
+        </label>
+        <div id="mx-fn-nc" class="mx-cat-in" hidden>
+          <label>Dirección de tu Nextcloud <input type="text" id="mx-fn-url" placeholder="https://cloud.ejemplo.com" /></label>
+          <label>Esa carpeta, vista desde el servidor <input type="text" id="mx-fn-remota" placeholder="/" /></label>
+        </div>
+        <p class="ax-muted" id="mx-fn-msg" role="status"></p>
+        <div class="mx-art-btns"><button type="button" id="mx-fn-cancel">Cancelar</button><button type="button" id="mx-fn-ok">Guardar fuente</button></div>
+      </div>
+    </div>
+  </dialog>
+  <dialog class="mx-art" id="mx-art-dlg">
+    <form method="dialog" id="mx-art-form">
+      <h3>Artefacto nuevo</h3>
+      <label>Título <input type="text" id="mx-art-titulo" required placeholder="ej. Libro de artista · Sancocho" /></label>
+      <label>Tipo
+        <select id="mx-art-tipo">
+          <option value="original">Original</option><option value="libro">Libro</option><option value="grafica-enmarcada">Gráfica enmarcada</option>
+          <option value="fotografia">Fotografía</option><option value="video">Video</option><option value="codigo">Código</option>
+        </select>
+      </label>
+      <label>Fotos <input type="file" id="mx-art-fotos" accept="image/jpeg,image/png,image/webp,image/gif" multiple /></label>
+      <p class="ax-muted" id="mx-art-msg">El resto de la ficha (año, técnica, medidas…) queda en blanco para escribirlo luego.</p>
+      <div class="mx-art-btns"><button type="button" id="mx-art-cancel">Cancelar</button><button type="submit" id="mx-art-ok">Guardar</button></div>
+    </form>
+  </dialog>
+  <aside class="mx-panel" id="mx-panel" aria-live="polite"></aside>
+  <dialog class="ax-aj" id="ax-aj-dlg" aria-label="Ajustes">
+    <div class="ax-aj-in">
+      <h3>Ajustes <span>—</span></h3>
+      <div class="ax-aj-cuerpo" id="ax-aj-cuerpo"></div>
+      <p class="ax-aj-msg" id="ax-aj-msg" role="status"></p>
+      <div class="mx-art-btns"><button type="button" id="ax-aj-cancel">Cerrar</button><button type="button" id="ax-aj-ok">Guardar</button></div>
+    </div>
+  </dialog>
+  <!-- Conversar (chat.js): el contexto lo arma el servidor local con lo que el índice conoce; nada se escribe -->
+  <aside class="ax-chat" id="ax-chat" hidden aria-label="Conversar">
+    <div class="ax-chat-bar" title="Arrastrar · ⤢ expandir · doble clic: volver a su sitio · la esquina de abajo agranda">
+      <span class="ax-grip" aria-hidden="true">⋮⋮</span>
+      <span class="ax-entrada-title">CONVERSAR <span>—</span></span>
+      <select id="ax-chat-modelo" aria-label="Modelo de LM Studio"></select>
+      <button type="button" class="ax-chat-mini" id="ax-chat-guardar">↥</button>
+      <button type="button" class="ax-chat-mini" id="ax-chat-guardadas" aria-expanded="false" title="Las conversaciones guardadas en el archivo: verlas y retomarlas">Guardadas</button>
+      <button type="button" class="ax-chat-mini" id="ax-chat-nueva" title="Empezar otra conversación (lo nombrado se queda)">Nueva</button>
+      <button type="button" class="ax-chat-mini" id="ax-chat-md" title="Descargar la conversación como markdown">↓ .md</button>
+      <button type="button" class="ax-fold" id="ax-chat-grande" aria-label="Expandir o volver">⤢</button>
+      <button type="button" class="ax-fold" id="ax-chat-cerrar" aria-label="Cerrar">×</button>
+    </div>
+    <div class="ax-chat-sobre">
+      <span class="ax-kicker">Sobre</span>
+      <div class="ax-pills" id="ax-chat-refs"></div>
+      <button type="button" class="ax-chat-mini" id="ax-chat-delante" title="Sumar el proyecto o nodo abierto en el grafo y las imágenes elegidas en la Mesa">+ lo que tengo delante</button>
+    </div>
+    <p class="ax-chat-archivo" id="ax-chat-archivo" hidden></p>
+    <p class="ax-chat-aviso" id="ax-chat-aviso" role="status" hidden></p>
+    <div class="ax-chat-log" id="ax-chat-log" aria-live="polite"></div>
+    <div class="ax-chat-lista" id="ax-chat-lista" hidden></div>
+    <form class="ax-chat-form" id="ax-chat-form">
+      <div class="ax-chat-sug" id="ax-chat-sug" hidden></div>
+      <div class="ax-chat-voz" id="ax-chat-voz" hidden>
+        <label title="Voces del sistema; primero las de Latinoamérica. Más voces (o «mejoradas»): Ajustes del Sistema → Accesibilidad → Contenido leído">Voz <select id="ax-chat-vozsel"></select></label>
+        <label title="Velocidad">vel. <input type="range" id="ax-chat-vel" min="0.7" max="1.5" step="0.05" /></label>
+        <label title="Leer cada respuesta en voz alta al terminar"><input type="checkbox" id="ax-chat-leer" /> leer cada respuesta</label>
+      </div>
+      <textarea id="ax-chat-in" rows="2" placeholder="Pregunta, o escribe @ para nombrar un proyecto, una foto, un ensayo…"></textarea>
+      <div class="ax-chat-pie">
+        <label title="Cuánto del archivo va en cada pregunta. Más contexto necesita un modelo cargado con ventana larga">Contexto
+          <select id="ax-chat-ctxn"><option value="6000">breve</option><option value="14000">medio</option><option value="32000">amplio</option><option value="80000">muy amplio</option></select>
+        </label>
+        <label title="Con un modelo que ve imágenes (vlm), las fotos nombradas viajan también como imagen"><input type="checkbox" id="ax-chat-ver" /> mirar las fotos</label>
+        <button type="submit" class="ax-chat-env" id="ax-chat-env">Enviar</button>
+      </div>
+    </form>
+  </aside>
+
+  <script is:inline type="application/json" id="ax-data" set:html={JSON.stringify(grafo)}></script>
+  <script>
+    import '../scripts/anarchivo/main.js';
+    import { initPublicar } from '../scripts/anarchivo/publicar.js';
+    initPublicar();
+  </script>
+</body>
+</html>

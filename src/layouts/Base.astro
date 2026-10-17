@@ -1,0 +1,73 @@
+---
+import '../styles/global.css';
+import data from '../data/index.json';
+import { cargar } from '../../scripts/config.mjs';
+
+const atelier = cargar(); // el nombre del archivo: «Ajustes» (dashboard/anarchivo.config.json)
+
+interface Props { title: string; sub?: string; active: string }
+const { title, sub, active } = Astro.props;
+
+// Entrada = Anarchivo. Resumen/Ciclo de vida/Grafo fueron las tres maneras
+// paralelas de mirar los mismos datos mientras se buscaba la forma; Anarchivo
+// ya las absorbe (su vista Carpetas = ciclo de vida, su grafo = /grafo con
+// tarjetas flotantes encima). Se quedan como versiones congeladas de proceso,
+// no como puertas de entrada — ver CLAUDE.md § dashboard.
+const base = import.meta.env.BASE_URL; // '/' en dev, la subcarpeta de Publicar en el build de deploy
+const nav = [
+  { id: 'anarchivo', label: 'Anarchivo', href: `${base}anarchivo` },
+  { divider: 'versiones anteriores — congeladas' },
+  { id: 'resumen', label: 'Resumen (v1)', href: `${base}resumen` },
+  { id: 'ciclo', label: 'Ciclo de vida (v1)', href: `${base}ciclo-de-vida` },
+  { id: 'grafo', label: 'Grafo (v2)', href: `${base}grafo` },
+  { divider: 'playbook' },
+  { id: 'convocatorias', label: 'Convocatorias' },
+  { id: 'bitacora', label: 'Bitácora', href: `${base}bitacora` },
+  { id: 'ensayos', label: 'Ensayos' },
+  { id: 'ediciones', label: 'Ediciones' },
+  { id: 'statement', label: 'Statement' },
+  { id: 'principios', label: 'Principios' },
+  { id: 'practicas', label: 'Prácticas' },
+];
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} — {atelier.nombre}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <nav class="ax-seg modos" aria-label="Archivo o anarchivo">
+      <a href={`${base}resumen`} class="on" aria-current="page">Archivo</a>
+      <a href={`${base}anarchivo`}>Anarchivo</a>
+    </nav>
+    <div class="shell">
+      <aside class="side">
+        <div class="brand">{atelier.nombre.toLocaleUpperCase('es')}</div>
+        {atelier.firma && <div class="sub">{atelier.firma}</div>}
+        <nav class="nav">
+          {nav.map((n) =>
+            n.divider ? (
+              <span class="nav-divider">{n.divider}</span>
+            ) : n.href ? (
+              <a href={n.href} class={n.id === active ? 'on' : ''}><i class="dot"></i>{n.label}</a>
+            ) : (
+              <span class="off" title="Próxima etapa"><i class="dot"></i>{n.label}</span>
+            )
+          )}
+        </nav>
+        <div class="foot">Solo lectura{data.demo ? ' · Datos de ejemplo' : ''}</div>
+      </aside>
+      <main>
+        {data.demo && <div class="demo">Playbook no encontrado: se muestran datos de ejemplo. Define PLAYBOOK_DIR.</div>}
+        <h1>{title} <em>—</em></h1>
+        {sub && <p class="lead">{sub}</p>}
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>

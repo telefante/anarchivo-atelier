@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self'" />
+<title>Anarchivo</title>
+<style>
+  :root { --bg: #161615; --ink: #ecece8; --muted: #9a9a92; --chip: #2a2a27; --accent: #da3a16; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 13px 'Barlow Semi Condensed', -apple-system, system-ui, sans-serif; -webkit-app-region: drag; user-select: none; }
+  main { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+  img { width: 112px; height: 112px; }
+  h1 { margin: 0; font-weight: 500; font-size: 13px; letter-spacing: 3px; }
+  h1 span { color: var(--accent); }
+  #fase { color: var(--ink); letter-spacing: .6px; text-transform: uppercase; font-size: 11px; }
+  #linea { color: var(--muted); max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: 11px 'Roboto Mono', ui-monospace, monospace; min-height: 1.4em; }
+  .error #fase { color: var(--accent); }
+  .error #linea { white-space: normal; text-align: center; }
+  .punto { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 8px; animation: latir 1.2s ease-in-out infinite; vertical-align: middle; }
+  .error .punto { animation: none; }
+  @keyframes latir { 50% { opacity: .25; } }
+</style>
+</head>
+<body>
+<main>
+  <img src="build/icono.png" alt="" />
+  <h1>ANARCHIVO <span>—</span></h1>
+  <div id="fase"><i class="punto"></i>arrancando</div>
+  <div id="linea"></div>
+</main>
+<script>
+  // main.cjs llama a estado(fase, línea) mientras sincroniza y levanta el servidor
+  const FASES = { sync: 'leyendo el playbook', servidor: 'levantando el servidor', elegir: 'elige la carpeta dashboard/', listo: 'abriendo', error: 'no pudo arrancar' };
+  window.estado = (fase, linea) => {
+    if (fase) { document.getElementById('fase').innerHTML = `<i class="punto"></i>${FASES[fase] || fase}`; document.body.classList.toggle('error', fase === 'error'); }
+    if (linea) document.getElementById('linea').textContent = linea;
+  };
+</script>
+</body>
+</html>
